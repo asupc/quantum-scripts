@@ -44,7 +44,7 @@ module.exports.convertWskey = async (wskey) => {
     var convertServiceUrl = "http://114.215.146.116:8015/api/open/ConvertWskey";
     if (process.env.WskeyConvertService) {
         var services = process.env.WskeyConvertService.split("&");
-        if (services > 1) {
+        if (services.length > 1) {
             console.log("似乎有多个WskeyConvertService，随机一个吧");
             convertServiceUrl = services[Math.floor(Math.random() * services.length)];
         }
