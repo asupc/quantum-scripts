@@ -36,7 +36,7 @@ var failedCount = 0;
     await sendNotify(m1, true)
     for (var i = 0; i < datas.length; i++) {
         var data = datas[i];
-        if (data.Data8 && moment(data.Data8).add(WSKEY_MIN_CONVERT_HOUR, 'days') > moment()) {
+        if (data.Data8 && moment(data.Data8).add(WSKEY_MIN_CONVERT_HOUR, 'hours') > moment()) {
             console.log(`pin：${data.Data5}，上一次成功转换时间：${data.Data8}，未超过：${WSKEY_MIN_CONVERT_HOUR}小时，跳过转换。`)
             var data2 = await allEnvs(data.Data5, 2, true);
             if (data2.length == 0) {
