@@ -62,11 +62,6 @@ var failedCount = 0;
             console.log("开始禁用失效wskey。")
             data.Data7 = "否";
             overdueCount += 1;
-            //try {
-            //    await updateCustomData(data);
-            //} catch {
-            //    console.log("禁用wskey出现了异常。")
-            //}
         } else {
             successCount += 1;
             console.log("开始处理提交JDCOOKIE：" + convertResult.data)
@@ -76,11 +71,14 @@ var failedCount = 0;
     }
     updateCustomDatas(datas);
     await sendNotify(`wskey转换完成，成功：${successCount}，失效：${overdueCount}，转换失败：${failedCount}。`, true)
-    console.log("开始同步环境变量到青龙。")
-    await syncEnvs(true);
+    if (successCount > 0) {
+        console.log("开始同步环境变量到青龙。")
+        await syncEnvs(true);
+    } else {
+        console.log("没有转换成功的wskey，跳过同步环境变量。");
+    }
 })().catch((e) => {
-    console.log("执行脚本出现异常了。");
-    console.log(e);
+    console.log("执行脚本出现异常了。" + e);
 });
 
 /**

@@ -270,12 +270,12 @@
         "Id": "2c4d5d23d5384e74829c2506a678704b"
     },
     {
-        "Name": "短信登录",
+        "Name": "nark短信登录",
         "Command": "登录|登陆|短信",
         "ConcCount": 0,
-        "CommandEnv": "NVJDCStart",
+        "CommandEnv": "",
         "Cron": null,
-        "FileName": "addCookie.js",
+        "FileName": "jd_nark.js",
         "TextToPicture": false,
         "EnableRegex": true,
         "FileCache": false,
@@ -290,7 +290,7 @@
         "ConcEnvName": null,
         "Manager": false,
         "WaitTime": 0,
-        "CreateTime": "2022-09-05T19:44:56",
+        "CreateTime": "2022-09-05T19:46:34",
         "TaskStatus": 0,
         "TaskThreadId": null,
         "TaskStartNotify": null,
@@ -300,9 +300,9 @@
             {
                 "Name": "短信验证码",
                 "EnableRegex": true,
-                "Command": "\\d{6}",
+                "Command": "^\\d{6}$",
                 "Sort": 2,
-                "TaskId": "2e0e62dc716e47af8c8aed29f4f0192e",
+                "TaskId": "6709b4bd7619478884aa7fd01731a551",
                 "CommandEnv": "NVJDCVerifyCode",
                 "Revocation": true,
                 "WaitTime": 0,
@@ -310,11 +310,23 @@
                 "Id": "2e6eaabbd7344b33a526f6cce2fe8d8f"
             },
             {
+                "Name": "身份证或设备认证",
+                "EnableRegex": true,
+                "Command": "^\\d{6}$|^\\d{5}(X|x)$",
+                "Sort": 3,
+                "TaskId": "6709b4bd7619478884aa7fd01731a551",
+                "CommandEnv": "CardCode",
+                "Revocation": false,
+                "WaitTime": 0,
+                "Remark": "身份证前2位加后4位，或者设备认证回复999999",
+                "Id": "a12d095f9f774f3c8877d4670c607c4f"
+            },
+            {
                 "Name": "手机号码",
                 "EnableRegex": true,
                 "Command": "^1[3|4|5|6|7|8|9][0-9]{9}$",
                 "Sort": 1,
-                "TaskId": "2e0e62dc716e47af8c8aed29f4f0192e",
+                "TaskId": "6709b4bd7619478884aa7fd01731a551",
                 "CommandEnv": "NVJDCPhone",
                 "Revocation": true,
                 "WaitTime": 0,
@@ -322,7 +334,7 @@
                 "Id": "be237ef981d441cd94aa9fd9cb625307"
             }
         ],
-        "Id": "2e0e62dc716e47af8c8aed29f4f0192e"
+        "Id": "6709b4bd7619478884aa7fd01731a551"
     },
     {
         "Name": "量子账单",

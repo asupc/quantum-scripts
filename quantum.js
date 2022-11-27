@@ -471,7 +471,6 @@ ${content}
             body.MessageType = 1;
             bodys.push(body);
         }
-
         for (var i = 0; i < bodys.length; i++) {
             var b = JSON.stringify(bodys[i]);
             const body = await api({
@@ -768,3 +767,20 @@ module.exports.finshStepCommandTask = async () => {
     console.log("手动结束当前任务。");
     return body;
 };
+
+
+/**
+ * 扣除当前用户积分
+ * @param {Integer} USE_SCORE 扣除积分数量
+ * */
+module.exports.deductionIntegral = async (USE_SCORE) => {
+    const body = await api({
+        url: serverAddres + `api/User/DeductionIntegral/${process.env.user_id}/${USE_SCORE}`,
+        headers: {
+            'User-Agent': 'apifox/1.0.0 (https://www.apifox.cn)',
+        },
+        method: 'get',
+    }).json();
+
+    return body();
+}

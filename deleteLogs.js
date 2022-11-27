@@ -42,7 +42,7 @@ catch {
     }
     if (logs.length > 0) {
         const body = await api({
-            url: serverAddres + 'api/logs',
+            url: 'api/logs',
             body: JSON.stringify(logIds),
             method: 'delete',
             headers: {
@@ -51,4 +51,6 @@ catch {
         }).json();
         console.log("删除日志返回结果：" + JSON.stringify(body));
     }
-})().catch((e) => { console.log("脚本异常：" + e); });
+})().catch((e) => {
+    console.log("脚本异常：" + e);
+});
