@@ -205,8 +205,7 @@ async function verifyCode() {
         }),
         method: 'post',
         headers: {
-            Accept: 'text/plain',
-            "Content-Type": "application/json-patch+json"
+            'Content-Type': 'application/json'
         }
     };
     let verifyCodeResult = null;
@@ -223,7 +222,6 @@ async function verifyCode() {
 }
 
 async function VerifyCardCode() {
-
     var data = JSON.stringify({
         Phone: Phone,
         Code: CardCode,
@@ -235,15 +233,13 @@ async function VerifyCardCode() {
         url: NARK_URL + "/api/VerifyCardCode",
         body: data,
         headers: {
-            Accept: 'text/plain',
-            "Content-Type": "application/json-patch+json"
+            'Content-Type': 'application/json'
         }
     }
     let VerifyCardCodeResult = null;
     await api(options).then(async response => {
-        data = JSON.parse(response.body);
+        VerifyCardCodeResult = JSON.parse(response.body);
         console.log("身份或设备认证 返回：" + response.body)
-        VerifyCardCode = data;
     }).catch(async (e) => {
         console.log("身份或设备认证请求异常：" + JSON.stringify(e))
         await sendNotify("请求登录失败了，尝试其他CK获取方式吧！");
@@ -253,6 +249,6 @@ async function VerifyCardCode() {
 }
 
 async function narkExceptionNotifyManager() {
-    await sendNotify(`用户：${process.env.CommunicationId}，手机号：${Phone}，请求nark登录服务：${NARK_URL} 出现异常。请查阅日志查看详情。`);
+    await sendNotify(`手机号：${Phone}，请求nark登录服务：${NARK_URL} 出现异常。请查阅日志查看详情。`);
     await finshStepCommandTask();
 }
