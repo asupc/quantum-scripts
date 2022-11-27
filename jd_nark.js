@@ -71,6 +71,10 @@ const { GetJDUserInfoUnion, addOrUpdateJDCookie
         await finshStepCommandTask();
         return;
     }
+    if (NARK_URL && !NARK_URL.endsWith("/")) {
+        NARK_URL = NARK_URL + "/";
+    }
+
     if (Phone && VerifyCode && CardCode) {
         var message = `收到，稍等。。。`
         await sendNotify(message);
@@ -169,7 +173,7 @@ const { GetJDUserInfoUnion, addOrUpdateJDCookie
 
 async function SendSMS() {
     const options = {
-        url: NARK_URL + "/api/SendSMS",
+        url: NARK_URL + "api/SendSMS",
         body: JSON.stringify({
             Phone: Phone,
             qlkey: 0
@@ -196,7 +200,7 @@ async function SendSMS() {
 
 async function verifyCode() {
     const options = {
-        url: NARK_URL + "/api/VerifyCode",
+        url: NARK_URL + "api/VerifyCode",
         body: JSON.stringify({
             Phone: Phone,
             code: VerifyCode,
@@ -230,7 +234,7 @@ async function VerifyCardCode() {
     })
     console.log("请求 VerifyCardCode：" + data);
     const options = {
-        url: NARK_URL + "/api/VerifyCardCode",
+        url: NARK_URL + "api/VerifyCardCode",
         body: data,
         headers: {
             'Content-Type': 'application/json'
