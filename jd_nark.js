@@ -147,25 +147,28 @@ const { GetJDUserInfoUnion, addOrUpdateJDCookie
         return;
     }
     console.log("nark服务获取到CK 信息：" + cookie);
-    var jdInfo = await GetJDUserInfoUnion(cookie);
-    if (jdInfo.retcode != "0" && !jdInfo.data) {
-        return false;
-    }
-    if (ADD_COOKIE_USE_SCORE && ADD_COOKIE_USE_SCORE > 0) {
-        var result = await deductionIntegral(ADD_COOKIE_USE_SCORE)
-        if (result.Code != 200) {
-            await sendNotify(result.Message);
+
+    try {
+        var jdInfo = await GetJDUserInfoUnion(cookie);
+        if (jdInfo.retcode != "0" && !jdInfo.data) {
             return false;
         }
-    }
-
-    await addOrUpdateJDCookie(cookie, process.env.user_id, jdInfo.data.userInfo.baseInfo.nickname);
-
-    await sendNotify(`登录成功！
+        if (ADD_COOKIE_USE_SCORE && ADD_COOKIE_USE_SCORE > 0) {
+            var result = await deductionIntegral(ADD_COOKIE_USE_SCORE)
+            if (result.Code != 200) {
+                await sendNotify(result.Message);
+                return false;
+            }
+        }
+        await addOrUpdateJDCookie(cookie, process.env.user_id, jdInfo.data.userInfo.baseInfo.nickname);
+        await sendNotify(`登录成功！
 用户级别：${jdInfo.data.userInfo.baseInfo.levelName}
 剩余京豆：${jdInfo.data.assetInfo.beanNum}
 京东昵称：${jdInfo.data.userInfo.baseInfo.nickname}`);
-
+    } catch (e) {
+        await sendNotify("处理信息异常，您也可以尝试回复本消息重试提交：\n" + cookie)
+        console.log("处理异常：" + e);
+    }
 })()
     .catch((e) => {
         console.log("nark登录出现异常：" + e);
