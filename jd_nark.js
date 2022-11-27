@@ -236,6 +236,7 @@ async function VerifyCardCode() {
     const options = {
         url: NARK_URL + "api/VerifyCardCode",
         body: data,
+        method: 'post',
         headers: {
             'Content-Type': 'application/json'
         }
