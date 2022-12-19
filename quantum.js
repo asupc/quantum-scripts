@@ -774,13 +774,13 @@ module.exports.finshStepCommandTask = async () => {
  * @param {Integer} USE_SCORE 扣除积分数量
  * */
 module.exports.deductionIntegral = async (USE_SCORE) => {
+    var userId = process.env.user_id;
     const body = await api({
-        url: serverAddres + `api/User/DeductionIntegral/${process.env.user_id}/${USE_SCORE}`,
+        url: serverAddres + `api/User/DeductionIntegral/${userId}/${USE_SCORE}`,
         headers: {
             'User-Agent': 'apifox/1.0.0 (https://www.apifox.cn)',
         },
         method: 'get',
     }).json();
-
-    return body();
+    return body;
 }
