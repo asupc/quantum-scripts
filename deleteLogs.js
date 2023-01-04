@@ -42,7 +42,7 @@ catch {
     }
     if (logs.length > 0) {
         const body = await api({
-            url: 'api/logs',
+            url: serverAddres + 'api/logs',
             body: JSON.stringify(logIds),
             method: 'delete',
             headers: {
