@@ -166,7 +166,7 @@ module.exports.jCommand = async (command) => {
             'method': 'POST',
             'url': 'http://119.3.233.105:8080/JDSign/jCommand',
             'headers': {
-                'Content-Type': 'application/x-www-form-urlencoded'
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 code: command
