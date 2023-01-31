@@ -155,7 +155,7 @@ async function checkWeixinLogin() {
     };
     const response = await api(config);
     var result = response.body;
-    console.log(JSON.stringify(response.body) + "----- Cookie -----" + qrc);
+    console.log(JSON.stringify(response.body));
     if (result.code == 200) {
         return true;
     }
@@ -173,12 +173,20 @@ ${regResult[1]}`);
     }
     if (result.code == 410) {
         var wskey = result.data.wskey;
+        var tps= "扫码成功，但是提交失败了，请联系管理员查看相关日志。";
+
+        if(!wskey){
+            console.log("扫码成功，但未返回wskey信息，请检查BBK配置信息。")
+            await sendNotify(tps);
+            return false;
+        }
+
         console.log(`扫码获取到wskey：${wskey}`);
         console.log("开始将wskey转换成app_open格式：" + wskey)
         var convertResult = await convertWskey(wskey);
         if (!convertResult.success || convertResult.data.indexOf("pt_key=app_open") < 0) {
-            console.log("wskey转换失败了，给韭菜发送通知。");
-            await sendNotify(`扫码成功，但是提交失败了，请联系管理员吧。`);
+            console.log("wskey转换失败了。");
+            await sendNotify(tps);
             return false;
         }
         var jdck = convertResult.data;
@@ -187,7 +195,7 @@ ${regResult[1]}`);
         console.log("获取京东账户基本信息结果：" + JSON.stringify(userInfo));
         if (!userInfo || !userInfo.data || userInfo.retcode != "0") {
             sendNotify(`wskey似乎失效了：【${wskey}】`);
-            await sendNotify(`扫码成功，但是提交失败了，请联系管理员吧。`);
+            await sendNotify(tps);
             return false;
         }
         var msg = `提交成功辣！
