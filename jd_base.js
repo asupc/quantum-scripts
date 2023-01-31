@@ -6,10 +6,11 @@ if (!process.env.NO_CK_NOTIFY) {
     process.env.NO_CK_NOTIFY = "您没有提交CK。请按照教程获取CK发送给机器人。";
 }
 
-const { disableEnvs, sendNotify, addEnvs, allEnvs, api
+const { disableEnvs, sendNotify, addEnvs, allEnvs, api, getCustomData, updateCustomData, addCustomData
 } = require('./quantum');
 
 
+const moment = require('moment');
 /**
  * 检查京东ck登录状态
  * @param {any} jdCookie
@@ -182,6 +183,37 @@ module.exports.jCommand = async (command) => {
     return result;
 }
 
+
+/**
+ * 添加或更新wskey 到自定义数据表中
+ * @param {any} wskey key
+ * @param {any} pin pin
+ * @param {any} nickname 京东账号昵称
+ */
+module.exports.addOrUpdateWskey = async (wskey, pin, nickname) => {
+    console.log("开始提交wskey到自定义数据中");
+    var customDatas = await getCustomData("wskey_record", null, null, { Data5: pin })
+    var customData = {
+        Type: "wskey_record",
+        Data1: process.env.user_id,
+        Data2: process.env.CommunicationUserName,
+        Data3: process.env.CommunicationUserId,
+        Data4: wskey,
+        Data5: pin,
+        Data6: nickname,
+        Data7: "是",
+        Data8: moment().format("YYYY-MM-DD HH:mm:ss")
+    }
+    if (customDatas && customDatas.length > 0) {
+        console.log("更新wskey信息到自定义数据中");
+        customData.Id = customDatas[0].Id;
+        await updateCustomData(customData);
+    }
+    else {
+        var result = await addCustomData([customData]);
+        console.log("新增wskey信息到自定义数据中，提交结果" + JSON.stringify(result));
+    }
+}
 
 /**
  * 自定义卡密天数
