@@ -14,22 +14,19 @@
  * 
  * */
 
-const { sendNotify, getCustomData, updateCustomDatas, sleep, addOrUpdateCustomDataTitle, allEnvs } = require('./quantum');
-const { convertWskey, addOrUpdateJDCookie } = require('./jd_base');
+const { sendNotify, getCustomData, updateCustomDatas, sleep, allEnvs } = require('./quantum');
+const { convertWskey, addOrUpdateJDCookie, addWskeyCustomDataTile, wskeyCustomDataType } = require('./jd_base');
 const moment = require('moment');
 const {
     syncEnvs
 } = require('./quantum_syncEnv');
 let WSKEY_MIN_CONVERT_HOUR = parseInt(process.env.WSKEY_MIN_CONVERT_HOUR || 8);
-/**
- * customDataType 该值请勿随意更改
- * */
-const customDataType = "wskey_record";
+
 var successCount = 0;
 var overdueCount = 0;
 var failedCount = 0;
 !(async () => {
-    await addCustomDataTile();
+    await addWskeyCustomDataTile();
     var datas = await getWskey();
     var m1 = `开始转换，有效wskey：${datas.length}个。`
     console.log(m1)
@@ -49,7 +46,7 @@ var failedCount = 0;
         // 3秒转一个，防止过快转换失败了
         await sleep(3000);
         var wskey = `pin=${data.Data5};wskey=${data.Data4};`
-        var convertResult = await convertWskey(wskey);
+        var convertResult = await convertWskey(wskey, data1);
         if (!convertResult.success) {
             failedCount += 1;
             console.log(`wskey：【${wskey}】，转换失败。`)
@@ -85,27 +82,8 @@ var failedCount = 0;
  * 获取有效的wskey信息
  * */
 async function getWskey() {
-    var datas = await getCustomData(customDataType, null, null, {
+    var datas = await getCustomData(wskeyCustomDataType, null, null, {
         Data7: "是"
     });
     return datas;
-}
-
-
-/**
- * 添加或者更新自定义数据标题
- * */
-async function addCustomDataTile() {
-    await addOrUpdateCustomDataTitle({
-        Type: customDataType,
-        TypeName: "京东wskey",
-        Title1: "用户ID",
-        Title2: "用户昵称",
-        Title3: "QQ/WX",
-        Title4: "wskey",
-        Title5: "pin",
-        Title6: "账号名称",
-        Title7: "是否有效",
-        Title8: "转换时间"
-    })
 }

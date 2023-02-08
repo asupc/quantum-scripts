@@ -4,28 +4,20 @@
  * wskey将存放在 自定义数据表中，
  * 请通过数据管理查看信息
  * */
-const { sendNotify, addOrUpdateCustomDataTitle, addCustomData, getCustomData, updateCustomData } = require('./quantum');
+const { sendNotify } = require('./quantum');
 
-const { convertWskey, GetJDUserInfoUnion, addOrUpdateJDCookie } = require('./jd_base');
-const moment = require('moment');
-
-/**
- * customDataType 该值请勿随意更改
- * */
-const customDataType = "wskey_record";
+const { convertWskey, GetJDUserInfoUnion, addOrUpdateJDCookie, addOrUpdateWskey, addWskeyCustomDataTile } = require('./jd_base');
 
 let user_id = process.env.user_id; //用户id
 let command = process.env.command;
 
-let CommunicationUserId = process.env.CommunicationUserId; //通讯工具id qq。wx
-let CommunicationUserName = process.env.CommunicationUserName; //通讯工具昵称
 
 let key = '';
 let pin = '';
 
 !(async () => {
     let wskeys = command.split("&");
-    await addCustomDataTile();
+    await addWskeyCustomDataTile();
     for (var i = 0; i < wskeys.length; i++) {
         var wskey = wskeys[i] + ";";
         if (!wskey) {
@@ -76,52 +68,3 @@ let pin = '';
         await addOrUpdateJDCookie(convertResult.data, user_id, userInfo.data.userInfo.baseInfo.nickname);
     }
 })().catch((e) => { console.log("脚本异常：" + e); });
-
-/**
- * 添加或更新wskey 到自定义数据表中
- * @param {any} wskey key
- * @param {any} pin pin
- * @param {any} nickname 京东账号昵称
- */
-async function addOrUpdateWskey(wskey, pin, nickname) {
-    console.log("开始提交wskey到自定义数据中");
-    var customDatas = await getCustomData(customDataType, null, null, { Data5: pin })
-    var customData = {
-        Type: customDataType,
-        Data1: user_id,
-        Data2: CommunicationUserName,
-        Data3: CommunicationUserId,
-        Data4: wskey,
-        Data5: pin,
-        Data6: nickname,
-        Data7: "是",
-        Data8: moment().format("YYYY-MM-DD HH:mm:ss")
-    }
-    if (customDatas && customDatas.length > 0) {
-        console.log("更新wskey信息到自定义数据中");
-        customData.Id = customDatas[0].Id;
-        await updateCustomData(customData);
-    }
-    else {
-        var result = await addCustomData([customData]);
-        console.log("新增wskey信息到自定义数据中，提交结果" + JSON.stringify(result));
-    }
-}
-
-/**
- * 添加或者更新自定义数据标题
- * */
-async function addCustomDataTile() {
-    await addOrUpdateCustomDataTitle({
-        Type: customDataType,
-        TypeName: "京东wskey",
-        Title1: "用户ID",
-        Title2: "用户昵称",
-        Title3: "QQ/WX",
-        Title4: "wskey",
-        Title5: "pin",
-        Title6: "账号名称",
-        Title7: "是否有效",
-        Title8: "转换时间"
-    })
-}

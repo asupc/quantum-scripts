@@ -1,13 +1,13 @@
 [
     {
-        "Name": "微信扫码",
-        "Command": "微信扫码",
+        "Name": "BBK扫码获取wskey",
+        "Command": "微信扫码|京东扫码",
         "ConcCount": 0,
         "CommandEnv": null,
         "Cron": null,
         "FileName": "bbk-qr.js",
         "TextToPicture": false,
-        "EnableRegex": false,
+        "EnableRegex": true,
         "FileCache": false,
         "EnableConc": false,
         "Enable": true,

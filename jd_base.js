@@ -6,11 +6,12 @@ if (!process.env.NO_CK_NOTIFY) {
     process.env.NO_CK_NOTIFY = "您没有提交CK。请按照教程获取CK发送给机器人。";
 }
 
-const { disableEnvs, sendNotify, addEnvs, allEnvs, api, getCustomData, updateCustomData, addCustomData
+const { disableEnvs, sendNotify, addEnvs, allEnvs, api, getCustomData, updateCustomData, addCustomData, addOrUpdateCustomDataTitle
 } = require('./quantum');
 
-
+const wskeyCustomDataType = "wskey_record";
 const moment = require('moment');
+const { mode } = require('crypto-js');
 /**
  * 检查京东ck登录状态
  * @param {any} jdCookie
@@ -54,7 +55,30 @@ async function getJD_COOKIE_Pin_status(pin) {
  * 或者根据自己服务调整此处代码即可
  * @param {any} wskey
  */
-module.exports.convertWskey = async (wskey) => {
+module.exports.convertWskey = async (wskey, bbkJd) => {
+    console.log("wskey是否bbkJd：" + bbkJd);
+    if (bbkJd == "是") {
+        if (!process.env.bbk_qr_url_jd) {
+            console.log("未配置量子变量：bbk_qr_url_jd，该变量为BBK 京东扫码地址如：http://www.xyz.xyz:3081")
+            return {
+                success: false,
+                data: ""
+            };
+        }
+        const options = {
+            url: process.env.bbk_qr_url_jd + `/d/convert?wskey=${wskey.match(/wskey=([^; ]+)(?=;?)/)[1]}&pin=${wskey.match(/pin=([^; ]+)(?=;?)/)[1]}`,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            method: 'get'
+        }
+        const body = await api(options).json();
+        console.log("wskey 转换结果：" + JSON.stringify(body));
+        return {
+            success: true,
+            data: body.data
+        };
+    }
     var convertServiceUrl = "http://114.215.146.116:8015/api/open/ConvertWskey";
     if (process.env.WskeyConvertService) {
         var services = process.env.WskeyConvertService.split("&");
@@ -205,11 +229,11 @@ module.exports.jCommand = async (command) => {
  * @param {any} pin pin
  * @param {any} nickname 京东账号昵称
  */
-module.exports.addOrUpdateWskey = async (wskey, pin, nickname) => {
+module.exports.addOrUpdateWskey = async (wskey, pin, nickname, bbkJd) => {
     console.log("开始提交wskey到自定义数据中");
-    var customDatas = await getCustomData("wskey_record", null, null, { Data5: pin })
+    var customDatas = await getCustomData(wskeyCustomDataType, null, null, { Data5: pin })
     var customData = {
-        Type: "wskey_record",
+        Type: wskeyCustomDataType,
         Data1: process.env.user_id,
         Data2: process.env.CommunicationUserName,
         Data3: process.env.CommunicationUserId,
@@ -217,7 +241,8 @@ module.exports.addOrUpdateWskey = async (wskey, pin, nickname) => {
         Data5: pin,
         Data6: nickname,
         Data7: await getJD_COOKIE_Pin_status(pin) ? "是" : "否",
-        Data8: moment().format("YYYY-MM-DD HH:mm:ss")
+        Data8: moment().format("YYYY-MM-DD HH:mm:ss"),
+        Data9: bbkJd
     }
     if (customDatas && customDatas.length > 0) {
         console.log("更新wskey信息到自定义数据中");
@@ -229,6 +254,24 @@ module.exports.addOrUpdateWskey = async (wskey, pin, nickname) => {
         console.log("新增wskey信息到自定义数据中，提交结果" + JSON.stringify(result));
     }
 }
+
+module.exports.addWskeyCustomDataTile = async () => {
+    await addOrUpdateCustomDataTitle({
+        Type: wskeyCustomDataType,
+        TypeName: "京东wskey",
+        Title1: "用户ID",
+        Title2: "用户昵称",
+        Title3: "QQ/WX",
+        Title4: "wskey",
+        Title5: "pin",
+        Title6: "账号名称",
+        Title7: "是否有效",
+        Title8: "转换时间",
+        Title9: "是否BBK京东wskey"
+    })
+}
+
+
 
 
 /**
@@ -259,3 +302,5 @@ module.exports.sntypes = [{
     "value": 99 * 365,
     "key": "5"
 }];
+
+module.exports.wskeyCustomDataType = wskeyCustomDataType;

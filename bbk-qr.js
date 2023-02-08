@@ -3,6 +3,7 @@
  *
  * 
  * bbk_qr_url ，如：  http://www.123456.com:8888
+ * bbk_qr_url_jd ，京东扫码登录地址  如：  http://www.123456.com:3081
  * 
  * 系统设置中 服务地址 需要配置为外网可访问的地址。
  *
@@ -17,10 +18,11 @@ const {
 
 const { convertWskey, GetJDUserInfoUnion, addOrUpdateJDCookie, addOrUpdateWskey } = require('./jd_base');
 
-let user_id = process.env.user_id; //用户id
+var type = "微信";
 
 
 let bbk_qr_url = process.env.bbk_qr_url;
+
 
 let qrc = "";
 let t = 0;
@@ -29,10 +31,21 @@ let timeOut = 180;
 let serverPath = ""
 
 !(async () => {
-    if (!bbk_qr_url) {
+
+    if (process.env.command.indexOf("京东") > -1) {
+        if (!process.env.bbk_qr_url_jd) {
+            console.log("未配置BBK wskey 扫码服务地址，环境变量名称：bbk_qr_url_jd");
+            return false;
+        }
+        bbk_qr_url = process.env.bbk_qr_url_jd;
+        type = "京东";
+    } else if (!process.env.bbk_qr_url) {
         console.log("未配置BBK wskey 扫码服务地址，环境变量名称：bbk_qr_url");
         return false;
     }
+    console.log("扫码登录类型：" + type)
+
+
     const body = await api({
         url: serverAddres + `api/SystemConfig`,
         method: 'get',
@@ -114,7 +127,7 @@ async function getWeixinQR() {
     console.log("获取二维码信息成功！")
     var imgData = response.body['data']['qr'];
     timeOut = response.body['data']['timeout'];
-    qrc = response.headers["set-cookie"][0].match(/usr_=([^; ]+)(?=;?)/)[1]
+    qrc = (response.headers["set-cookie"][0] + ";").match(/usr_=([^; ]+)(?=;?)/)[1]
     console.log("会话Cookie：" + qrc)
     var base64Data = imgData.replace(/^data:image\/\w+;base64,/, "");
     var Readable = require('stream').Readable
@@ -131,7 +144,7 @@ async function getWeixinQR() {
         msg: `${serverPath}/qr_${t}.png`
     }, {
         MessageType: 1,
-        msg: `请使用微信扫描二维码并确认登录。`
+        msg: `请使用${type}扫描二维码并确认登录。`
     }]);
 }
 
@@ -173,9 +186,9 @@ ${regResult[1]}`);
     }
     if (result.code == 410) {
         var wskey = result.data.wskey;
-        var tps= "扫码成功，但是提交失败了，请联系管理员查看相关日志。";
+        var tps = "扫码成功，但是提交失败了，请联系管理员查看相关日志。";
 
-        if(!wskey){
+        if (!wskey) {
             console.log("扫码成功，但未返回wskey信息，请检查BBK配置信息。")
             await sendNotify(tps);
             return false;
@@ -183,7 +196,7 @@ ${regResult[1]}`);
 
         console.log(`扫码获取到wskey：${wskey}`);
         console.log("开始将wskey转换成app_open格式：" + wskey)
-        var convertResult = await convertWskey(wskey);
+        var convertResult = await convertWskey(wskey, type == "京东" ? "是" : "否");
         if (!convertResult.success || convertResult.data.indexOf("pt_key=app_open") < 0) {
             console.log("wskey转换失败了。");
             await sendNotify(tps);
@@ -207,7 +220,7 @@ ${regResult[1]}`);
         var key = wskey.match(/wskey=([^; ]+)(?=;?)/)[1]
         var pin = wskey.match(/pin=([^; ]+)(?=;?)/)[1]
 
-        await addOrUpdateWskey(key, pin, userInfo.data.userInfo.baseInfo.nickname)
+        await addOrUpdateWskey(key, pin, userInfo.data.userInfo.baseInfo.nickname, type == "京东" ? "是" : "否")
         console.log("开始处理提交JDCOOKIE：" + convertResult.data)
         await addOrUpdateJDCookie(convertResult.data, process.env.user_id, userInfo.data.userInfo.baseInfo.nickname);
         await sendNotify(msg);
