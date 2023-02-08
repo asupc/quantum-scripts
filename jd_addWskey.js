@@ -6,7 +6,7 @@
  * */
 const { sendNotify } = require('./quantum');
 
-const { convertWskey, GetJDUserInfoUnion, addOrUpdateJDCookie, addOrUpdateWskey, addWskeyCustomDataTile } = require('./jd_base');
+const { convertWskey, GetJDUserInfoUnion, addOrUpdateJDCookie, addOrUpdateWskey, addWskeyCustomDataTitle } = require('./jd_base');
 
 let user_id = process.env.user_id; //用户id
 let command = process.env.command;
@@ -17,7 +17,7 @@ let pin = '';
 
 !(async () => {
     let wskeys = command.split("&");
-    await addWskeyCustomDataTile();
+    await addWskeyCustomDataTitle();
     for (var i = 0; i < wskeys.length; i++) {
         var wskey = wskeys[i] + ";";
         if (!wskey) {

@@ -255,7 +255,7 @@ module.exports.addOrUpdateWskey = async (wskey, pin, nickname, bbkJd) => {
     }
 }
 
-module.exports.addWskeyCustomDataTile = async () => {
+module.exports.addWskeyCustomDataTitle = async () => {
     await addOrUpdateCustomDataTitle({
         Type: wskeyCustomDataType,
         TypeName: "京东wskey",
