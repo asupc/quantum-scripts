@@ -35,6 +35,19 @@ async function islogin(jdCookie) {
     }
 }
 
+async function getJD_COOKIE_Pin_status(pin) {
+    console.log("process.env.JD_COOKIE_DEFAULT_STATUS：" + process.env.JD_COOKIE_DEFAULT_STATUS);
+    if (process.env.JD_COOKIE_DEFAULT_STATUS == "false") {
+        var dd = await getCustomData("QuantumSN", null, null, {
+            Data6: pin,
+            Data9: "生效中",
+            Data11: process.env.user_id
+        });
+        return dd && dd.length > 0;
+    }
+    return true;
+}
+
 /**
  * 将wskey 转换成 app_open
  * wskey 转换服务可以替换成其他的，兼容标准的服务
@@ -54,7 +67,6 @@ module.exports.convertWskey = async (wskey) => {
         }
         console.log("使用自定义的Wskey转换服务！");
     }
-
     console.log("Wskey 转换服务地址：" + convertServiceUrl);
     try {
         const options = {
@@ -73,7 +85,7 @@ module.exports.convertWskey = async (wskey) => {
                 data: body.data[0]
             }
         } else {
-            console.log("wskey 转换失败，可能是黑IP了");
+            console.log("wskey 转换失败，可能是转换服务IP黑了");
         }
     }
     catch (e) {
@@ -109,9 +121,13 @@ module.exports.GetJDUserInfoUnion = async (jdCookie) => {
 
 /**
  * 添加或者更新jdCookie pt_key 格式
+ * 
+ * 支持变量：JD_COOKIE_DEFAULT_STATUS， 京东Cookie默认状态，默认true
+ * 
  * @param {any} jdCookie 京东ck
  * @param {any} user_id 用户id
  * @param {any} nickname 京东账号昵称
+ * @param {bool} JD_COOKIE_DEFAULT_STATUS 指定环境变量状态
  */
 module.exports.addOrUpdateJDCookie = async (jdCookie, user_id, nickname) => {
     var pt_key = jdCookie.match(/pt_key=([^; ]+)(?=;?)/)[1]
@@ -121,7 +137,7 @@ module.exports.addOrUpdateJDCookie = async (jdCookie, user_id, nickname) => {
     }
     var c = {
         Name: "JD_COOKIE",
-        Enable: true,
+        Enable: await getJD_COOKIE_Pin_status(pt_pin),
         Value: `pt_key=${pt_key};pt_pin=${pt_pin};`,
         UserRemark: nickname,
         UserId: user_id,
@@ -135,7 +151,6 @@ module.exports.addOrUpdateJDCookie = async (jdCookie, user_id, nickname) => {
         c.UserRemark = nickname;
         c.QLPanelEnvs = data2[0].QLPanelEnvs;
         c.Remark = data2[0].Remark;
-
         if (process.env.UPDATE_COOKIE_NOTIFY) {
             await sendNotify(`Cookie更新通知
 用户ID：${process.env.CommunicationUserId}
@@ -201,7 +216,7 @@ module.exports.addOrUpdateWskey = async (wskey, pin, nickname) => {
         Data4: wskey,
         Data5: pin,
         Data6: nickname,
-        Data7: "是",
+        Data7: await getJD_COOKIE_Pin_status(pt_pin) ? "是" : "否",
         Data8: moment().format("YYYY-MM-DD HH:mm:ss")
     }
     if (customDatas && customDatas.length > 0) {
@@ -214,6 +229,7 @@ module.exports.addOrUpdateWskey = async (wskey, pin, nickname) => {
         console.log("新增wskey信息到自定义数据中，提交结果" + JSON.stringify(result));
     }
 }
+
 
 /**
  * 自定义卡密天数

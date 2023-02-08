@@ -2,11 +2,19 @@
 const got = require('got');
 
 //------------- 量子助手系统环境变量部分 -------------
+
+ if(!process.env.serverAddres){
+    process.env.serverAddres = "http://localhost:5088"
+ }
+
+
 let serverAddres = process.env.serverAddres; //服务地址
 let CommunicationType = process.env.CommunicationType; //通讯类型
 let CommunicationId = process.env.CommunicationId; //通讯工具ID
 
 let group_id = process.env.group_id; //群组ID
+
+
 if (process.env.serverAddres && !process.env.serverAddres.endsWith("/")) {
     serverAddres = serverAddres + "/";
 }
@@ -24,7 +32,7 @@ const api = got.extend({
     }
 });
 
-console.log("脚本库更新时间：2022年11月17日");
+console.log("脚本库更新时间：2023年02月08日");
 
 /**
  * 
