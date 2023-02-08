@@ -216,7 +216,7 @@ module.exports.addOrUpdateWskey = async (wskey, pin, nickname) => {
         Data4: wskey,
         Data5: pin,
         Data6: nickname,
-        Data7: await getJD_COOKIE_Pin_status(pt_pin) ? "是" : "否",
+        Data7: await getJD_COOKIE_Pin_status(pin) ? "是" : "否",
         Data8: moment().format("YYYY-MM-DD HH:mm:ss")
     }
     if (customDatas && customDatas.length > 0) {
