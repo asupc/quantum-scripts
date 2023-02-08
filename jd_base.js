@@ -66,7 +66,7 @@ module.exports.convertWskey = async (wskey, bbkJd) => {
             };
         }
         const options = {
-            url: process.env.bbk_qr_url_jd + `/d/convert?wskey=${wskey.match(/wskey=([^; ]+)(?=;?)/)[1]}&pin=${wskey.match(/pin=([^; ]+)(?=;?)/)[1]}`,
+            url: process.env.bbk_qr_url_jd + `/d/convert?token=${process.env.bbk_token}&wskey=${wskey.match(/wskey=([^; ]+)(?=;?)/)[1]}&pin=${wskey.match(/pin=([^; ]+)(?=;?)/)[1]}`,
             headers: {
                 'Content-Type': 'application/json'
             },
