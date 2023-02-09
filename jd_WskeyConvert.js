@@ -46,7 +46,7 @@ var failedCount = 0;
         // 3秒转一个，防止过快转换失败了
         await sleep(3000);
         var wskey = `pin=${data.Data5};wskey=${data.Data4};`
-        var convertResult = await convertWskey(wskey, data.data9);
+        var convertResult = await convertWskey(wskey, data.Data9);
         if (!convertResult.success) {
             failedCount += 1;
             console.log(`wskey：【${wskey}】，转换失败。`)
