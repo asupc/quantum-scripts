@@ -52,8 +52,8 @@ var failedCount = 0;
             console.log(`wskey：【${wskey}】，转换失败。`)
             continue;
         }
-        if (convertResult.data.indexOf("pt_key=app_open") < 0) {
-            var msg = `wskey失效了，账户昵称：【${data.Data6}】，pin：【${data.Data5}】`
+        if (!convertResult.data || convertResult.data.indexOf("pt_key=app_open") < 0) {
+            var msg = `wskey失效了，账户昵称：【${data.Data6 || "-"}】，pin：【${data.Data5}】`
             console.log(msg);
             await sendNotify(msg, false, data.Data1);
             console.log("开始禁用失效wskey。")
