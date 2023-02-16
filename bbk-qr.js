@@ -3,7 +3,10 @@
  *
  * 
  * bbk_qr_url ，如：  http://www.123456.com:8888
+ * 
  * bbk_qr_url_jd ，京东扫码登录地址  如：  http://www.123456.com:3081
+ * 
+ * bbk_token , 转换wskey需要的，否则京东扫码的wskey无法完成转换
  * 
  * 系统设置中 服务地址 需要配置为外网可访问的地址。
  *

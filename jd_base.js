@@ -11,7 +11,6 @@ const { disableEnvs, sendNotify, addEnvs, allEnvs, api, getCustomData, updateCus
 
 const wskeyCustomDataType = "wskey_record";
 const moment = require('moment');
-const { mode } = require('crypto-js');
 /**
  * 检查京东ck登录状态
  * @param {any} jdCookie
@@ -41,8 +40,7 @@ async function getJD_COOKIE_Pin_status(pin) {
     if (process.env.JD_COOKIE_DEFAULT_STATUS == "false") {
         var dd = await getCustomData("QuantumSN", null, null, {
             Data6: pin,
-            Data9: "生效中",
-            Data11: process.env.user_id
+            Data9: "生效中"
         });
         return dd && dd.length > 0;
     }
@@ -63,6 +61,13 @@ module.exports.convertWskey = async (wskey, bbkJd) => {
             return {
                 success: false,
                 data: ""
+            };
+        }
+        if (!process.env.bbk_token) {
+            console.log("未配置环境变量 bbk_token 无法完成转换");
+            return {
+                success: false,
+                data: " "
             };
         }
         const options = {
@@ -141,7 +146,6 @@ module.exports.GetJDUserInfoUnion = async (jdCookie) => {
     const body = await api(options).json();
     return body;
 }
-
 
 /**
  * 添加或者更新jdCookie pt_key 格式
@@ -222,7 +226,6 @@ module.exports.jCommand = async (command) => {
     return result;
 }
 
-
 /**
  * 添加或更新wskey 到自定义数据表中
  * @param {any} wskey key
@@ -270,9 +273,6 @@ module.exports.addWskeyCustomDataTitle = async () => {
         Title9: "是否BBK京东wskey"
     })
 }
-
-
-
 
 /**
  * 自定义卡密天数
