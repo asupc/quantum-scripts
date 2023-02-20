@@ -38,7 +38,7 @@ if (process.env.JD_COOKIE) {
 }
 
 var cookies = [];
-const { sendNotify, getUserInfo, uuid
+const { sendNotify, getUserInfo, uuid, deductionIntegral
 } = require('./quantum');
 
 const { addOrUpdateJDCookie, GetJDUserInfoUnion } = require('./jd_base');
