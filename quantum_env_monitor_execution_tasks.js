@@ -27,7 +27,11 @@
  * 4. 在青龙配置文件中删除类似 export jd_cjhy_activityId="" 的环境变量
  * 
  * 
+ * 5. 如果不需要执行的定时执行表达式请改成 3 3 3 3 3
+ * 
  * */
+
+let skipSchedule = '3 3 3 3 3';
 
 const {
     qinglong, getCustomData, getEnvs, addEnvs, sendNotify, sleep, addCustomData
@@ -203,6 +207,10 @@ async function isRunning(scriptName) {
         console.log(`在【${QLTasks.Data[0].QLTasks.length}】个青龙中找到脚本任务：【${scriptName}】`);
         QLTasks = QLTasks.Data[0].QLTasks;
         for (var i = 0; i < QLTasks.length; i++) {
+            if (QLTasks[i].schedule == skipSchedule) {
+                console.log(`青龙：【${QLTasks[i].QLName}】任务定时为：【${skipSchedule}】 ，跳过执行。`)
+                continue;
+            }
             qlName += QLTasks[i].QLName + "，";
             if (QLTasks[i].status == 0) {
                 if (awaitCount > enforceCount) {
