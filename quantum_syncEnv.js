@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 /**
  * 
  * 环境变量同步
@@ -5,9 +6,10 @@
  * */
 
 const {
-    addEnvs, sendNotify, allEnvs, getQLPanels, getQLEnvs, syncEnv
+    addEnvs, sendNotify, getEnvs, getQLPanels, getQLEnvs, syncEnv, sleep
 } = require('./quantum');
 
+const moment = require('moment');
 let notifyMessage = "";
 
 /**
@@ -16,10 +18,13 @@ let notifyMessage = "";
  */
 async function sync(notify) {
     console.log("开始同步环境变量。")
-    var allQuantumEnvs = await allEnvs();
+    var allQuantumEnvs = await getEnvs();
+    console.log("获取所有环境变量完成，" + moment().format("YYYY-MM-DD HH:mm:ss"));
     var commonEnvs = allQuantumEnvs.filter((n => n.EnvType == 1));
     var userEnvs = allQuantumEnvs.filter((n => n.EnvType == 2));
     var qlPanels = (await getQLPanels()).filter((n) => n.Enable);
+
+    console.log("获取青龙容器完成，" + moment().format("YYYY-MM-DD HH:mm:ss"));
 
     var m = `环境变量：${allQuantumEnvs.length}个
 公共变量：${commonEnvs.length}个
@@ -43,7 +48,7 @@ async function sync(notify) {
             continue;
         }
         var qlEnvs = await getQLEnvs(ql);
-        console.log(`青龙容器:${ql.Name},获取环境变量:${qlEnvs.length}个`);
+        console.log(`青龙容器:${ql.Name},获取环境变量:${qlEnvs.length}个，` + moment().format("YYYY-MM-DD HH:mm:ss"));
         for (var x = 0; x < qlEnvs.length; x++) {
             var qlenv = qlEnvs[x];
             if (qlenv == undefined) {
@@ -52,7 +57,7 @@ async function sync(notify) {
             if (qlenv.name == "JD_COOKIE" && qlenv.status == 0 && qlenv.value.indexOf("pt_pin") > -1) {
                 try {
                     var pt_pin = qlenv.value.match(/pt_pin=([^; ]+)(?=;?)/)[1]
-                    var qEnv = userEnvs.filter((n) => n.Value.indexOf(pt_pin) > -1)[0];
+                    var qEnv = userEnvs.filter((n) => n.Value && n.Value.indexOf(pt_pin) > -1)[0];
                     //如果青龙中的环境变量更新时间更晚,则使用青龙的环境变量.
                     if (qEnv && qEnv.Value != qlenv.value && Date.parse(qlenv.timestamp) > Date.parse(qEnv.UpdateTime)) {
                         qEnv.Value = qlenv.value;
@@ -87,20 +92,24 @@ async function sync(notify) {
                         }
                     }
                 } catch (e) {
-                    console.log("Error：" + console.log(qlenv));
+                    console.log("Error：" + e);
                 }
             }
         }
         qlPanels[i].Envs = [];
         qlPanels[i].EnvCount = 0;
     }
-    console.log("CK处理完成")
+    console.log("CK处理完成，" + moment().format("YYYY-MM-DD HH:mm:ss"))
     if (newCKs && newCKs.length > 0) {
         console.log("将新增或更新的CK同步到量子助手：" + newCKs.length);
         notifyMessage += "\r从青龙更新变量：" + newCKs.length + "个";
         await addEnvs(newCKs);
+        await sleep(2000);
+        console.log("有变更的环境变量，等待2s完成缓存，" + moment().format("YYYY-MM-DD HH:mm:ss"))
     }
+    console.log("开始调用同步API，" + moment().format("YYYY-MM-DD HH:mm:ss"));
     let message = await syncEnv();
+    console.log("同步完成：" + moment().format("YYYY-MM-DD HH:mm:ss"));
     if (message) {
         for (var i = 0; i < message.length; i++) {
             console.log(message[i]);
@@ -108,7 +117,7 @@ async function sync(notify) {
         }
     }
     if (notify) {
-        sendNotify(notifyMessage, true)
+        await sendNotify(notifyMessage, true)
     }
 }
 module.exports.syncEnvs = sync;

@@ -32,7 +32,7 @@ const api = got.extend({
     }
 });
 
-console.log("脚本库更新时间：2023年02月08日");
+console.log("脚本库更新时间：2023年05月31日");
 
 /**
  * 

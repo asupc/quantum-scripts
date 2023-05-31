@@ -36,12 +36,12 @@ async function islogin(jdCookie) {
 }
 
 async function getJD_COOKIE_Pin_status(pin) {
-    console.log("process.env.JD_COOKIE_DEFAULT_STATUS：" + process.env.JD_COOKIE_DEFAULT_STATUS);
     if (process.env.JD_COOKIE_DEFAULT_STATUS == "false") {
         var dd = await getCustomData("QuantumSN", null, null, {
             Data6: pin,
             Data9: "生效中"
         });
+        console.log(`【${pin}】，卡密状态：【${(dd && dd.length > 0)}】`)
         return dd && dd.length > 0;
     }
     return true;
@@ -84,7 +84,7 @@ module.exports.convertWskey = async (wskey, bbkJd) => {
             data: body.data
         };
     }
-    var convertServiceUrl = "http://114.215.146.116:8015/api/open/ConvertWskey";
+    var convertServiceUrl = "http://quantum.cqzhilai.com.cn:8015/api/open/ConvertWskey";
     if (process.env.WskeyConvertService) {
         var services = process.env.WskeyConvertService.split("&");
         if (services.length > 1) {
@@ -123,6 +123,52 @@ module.exports.convertWskey = async (wskey, bbkJd) => {
     return {
         success: false
     };
+}
+
+/**
+ * 获取京东账户信息信息
+ * @param {any} jdCookie
+ * @returns {
+   "base": {
+      "TipUrl": "http://wqs.jd.com/my/accountv2.shtml?sceneid=11110&state=0&rurl=https://wqs.jd.com/my/jingdou/my.shtml?sceneval=2",
+      "accountType": 0,
+      "curPin": "jd_4b992df9995e1", //pin
+      "headImageUrl": "http://storage.360buyimg.com/i.imageUpload/6a645f3462393932646639393935653131343438353036383930323739_big.jpg",
+      "isJTH": "1",
+      "jdNum": 855, //京豆
+      "jvalue": 9508, // 京享值
+      "levelName": "锟斤拷石锟矫伙拷",
+      "mobile": "156*****880", 
+      "nickname": "Aurarol_99", //昵称
+      "userLevel": 105 //用户等级
+   },
+   "definePin": 0,
+   "isHitArea": 0,
+   "isHomeWhite": 0,
+   "isLongPwdActive": 1,
+   "isPlusVip": true, //是否plus会员
+   "isRealNameAuth": true, // 是否实名
+   "isShortPwdActive": 1,
+   "msg": "success.",
+   "orderFlag": 1,
+   "retcode": 0,
+   "userFlag": 1
+}
+ */
+module.exports.QueryJDUserInfo = async (jdCookie) => {
+    var config = {
+        method: 'get',
+        url: 'https://wq.jd.com/user/info/QueryJDUserInfo?sceneval=2',
+        headers: {
+            'Accept': 'application/json,text/plain, */*',
+            'Referer': 'https://wqs.jd.com/my/jingdou/my.shtml?sceneval=2',
+            'User-Agent': 'jdapp;iPhone;9.4.4;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1',
+            'Cookie': jdCookie,
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+    };
+    const body = await api(config).json();
+    return body;
 }
 
 /**
