@@ -1,38 +1,65 @@
 ﻿
 const got = require('got');
+const moment = require('moment');
+var HttpsProxyAgent = require("https-proxy-agent");
+process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = 0;
 
+console.log("脚本库更新时间：2023年06月16日");
 //------------- 量子助手系统环境变量部分 -------------
 
- if(!process.env.serverAddres){
+if (!process.env.serverAddres) {
     process.env.serverAddres = "http://localhost:5088"
- }
-
+}
 
 let serverAddres = process.env.serverAddres; //服务地址
 let CommunicationType = process.env.CommunicationType; //通讯类型
 let CommunicationId = process.env.CommunicationId; //通讯工具ID
-
 let group_id = process.env.group_id; //群组ID
 
 
 if (process.env.serverAddres && !process.env.serverAddres.endsWith("/")) {
     serverAddres = serverAddres + "/";
 }
-
-
 module.exports.serverAddres = serverAddres;
-const api = got.extend({
+
+var request_proxy_white_list = ['xkdaili.com', 'xiongmaodaili']
+
+if (process.env.request_proxy_white_list) {
+    process.env.request_proxy_white_list.split("&").forEach(item => {
+        request_proxy_white_list.push(item)
+    })
+}
+
+const apiExtend = got.extend({
     retry: { limit: 0 },
     hooks: {
         beforeRequest: [
-            options => {
+            async options => {
                 options.headers.Authorization = "Bearer " + process.env.QuantumAssistantTemporaryToken;
+                if (options.url.toString().indexOf(process.env.serverAddres) != 0 && process.env.system_enable_proxy == "true" &&
+                    request_proxy_white_list.filter((s) => options.url.toString().indexOf(s) > -1).length == 0) {
+                    if (proxyInfo == null || moment(proxyInfo.expire) < moment()) {
+                        proxyInfo = await getXKProxy();
+                        if (proxyInfo == null) {
+                            proxyInfo = await getXMProxy();
+                        }
+                    }
+                    if (proxyInfo && moment(proxyInfo.expire) > moment()) {
+                        var agent = new HttpsProxyAgent(`http://${proxyInfo.ip}:${proxyInfo.port}`);
+                        options.agent = {
+                            https: agent,
+                            http: agent,
+                        }
+                    }
+                }
             }
         ]
     }
 });
 
-console.log("脚本库更新时间：2023年05月31日");
+var proxyInfo = null;
+
+module.exports.api = apiExtend;
 
 /**
  * 
@@ -40,7 +67,7 @@ console.log("脚本库更新时间：2023年05月31日");
  * 
  * */
 async function getQLPanels() {
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + 'api/QLPanel',
         headers: {
             Accept: 'text/plain',
@@ -55,7 +82,7 @@ async function getQLPanels() {
  * @param {any} searchValue 搜索关键字
  */
 async function getQLEnvs(ql, searchValue) {
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + 'api/qlPanel/envs/' + ql.Id,
         method: 'get',
         searchParams: {
@@ -75,7 +102,7 @@ async function getQLEnvs(ql, searchValue) {
  * @param {any} ids 环境变量id 数组
  */
 async function deleteQLEnvs(ql, ids) {
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + 'api/qlPanel/envs/' + ql.Id,
         method: 'delete',
         body: JSON.stringify(ids),
@@ -92,7 +119,7 @@ async function deleteQLEnvs(ql, ids) {
  * @param {any} envs
  */
 async function addQLEnvs(ql, envs) {
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + 'api/qlPanel/envs/' + ql.Id,
         method: 'delete',
         body: JSON.stringify(envs),
@@ -103,7 +130,6 @@ async function addQLEnvs(ql, envs) {
     return body.Data.data;
 }
 
-module.exports.api = api;
 
 // 获取青龙面板信息
 module.exports.getQLPanels = getQLPanels;
@@ -160,7 +186,7 @@ module.exports.getQLEnvs = getQLEnvs;
 
 // 同步环境变量
 module.exports.syncEnv = async () => {
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + 'api/env/sync',
         method: "get",
         headers: {
@@ -177,7 +203,7 @@ module.exports.syncEnv = async () => {
  * @param {any} ids
  */
 module.exports.deleteQLEnvs = async (ql, ids) => {
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + 'api/qlPanel/envs/' + ql.Id,
         body: JSON.stringify(ids),
         method: 'delete',
@@ -195,7 +221,7 @@ module.exports.deleteQLEnvs = async (ql, ids) => {
  */
 
 module.exports.addQLEnvs = async (ql, envs) => {
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + 'api/qlPanel/envs/' + ql.Id,
         body: JSON.stringify(envs),
         method: 'post'
@@ -209,7 +235,7 @@ module.exports.addQLEnvs = async (ql, envs) => {
  * @param {any} env
  */
 module.exports.addEnvs = async (env) => {
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + 'api/env',
         method: 'post',
         body: JSON.stringify(env),
@@ -227,7 +253,7 @@ module.exports.addEnvs = async (env) => {
  */
 module.exports.disableEnvs = async (envs) => {
     if (envs && envs.length > 0) {
-        const body = await api({
+        const body = await apiExtend({
             url: serverAddres + 'api/env/DisableEnvs',
             method: 'put',
             body: JSON.stringify(envs),
@@ -250,7 +276,7 @@ module.exports.disableEnvs = async (envs) => {
  * @param {any} userId
  */
 module.exports.allEnvs = async (key, envType, enable, qlPanelId, userId) => {
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + 'api/env',
         method: 'get',
         searchParams: {
@@ -271,7 +297,7 @@ module.exports.allEnvs = async (key, envType, enable, qlPanelId, userId) => {
 };
 
 async function getEnvs(name, key, envType, userId) {
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + 'api/env/Query',
         method: 'get',
         searchParams: {
@@ -308,7 +334,7 @@ async function getCustomData(type, startTime, endTime, dataQuery) {
     }
     dataQuery.createTimeStart = startTime;
     dataQuery.createTimeEnd = endTime;
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + 'api/CustomData/' + type,
         method: 'get',
         searchParams: dataQuery,
@@ -322,7 +348,7 @@ async function getCustomData(type, startTime, endTime, dataQuery) {
 
 
 async function deleteCustomData(ids) {
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + `api/CustomData`,
         method: 'delete',
         body: JSON.stringify(ids),
@@ -335,7 +361,7 @@ async function deleteCustomData(ids) {
 }
 
 async function updateCustomData(data) {
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + `api/CustomData`,
         method: 'put',
         body: JSON.stringify(data),
@@ -351,7 +377,7 @@ async function updateCustomData(data) {
  * 批量修改数据管理 （数组）
  * */
 async function updateCustomDatas(datas) {
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + `api/CustomData/updates`,
         method: 'put',
         body: JSON.stringify(datas),
@@ -368,7 +394,7 @@ async function updateCustomDatas(datas) {
  * @param {[{}]} data 数组
  */
 async function addCustomData(data) {
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + `api/CustomData`,
         method: 'post',
         body: JSON.stringify(data),
@@ -382,7 +408,7 @@ async function addCustomData(data) {
 
 
 async function deleteEnvByIds(ids) {
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + `api/env/deletes`,
         method: 'delete',
         body: JSON.stringify(ids),
@@ -481,7 +507,7 @@ ${content}
         }
         for (var i = 0; i < bodys.length; i++) {
             var b = JSON.stringify(bodys[i]);
-            const body = await api({
+            const body = await apiExtend({
                 url: serverAddres + `api/Notifiy`,
                 method: 'post',
                 body: b,
@@ -570,7 +596,7 @@ module.exports.addCustomData = addCustomData;
  * 获取用户信息
  * */
 module.exports.getUserInfo = async () => {
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + 'api/User/' + process.env.user_id,
         method: 'get',
         headers: {
@@ -586,7 +612,7 @@ module.exports.getUserInfo = async () => {
  * @param {any} user
  */
 module.exports.updateUserInfo = async (user) => {
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + 'api/User',
         method: 'put',
         body: JSON.stringify(user),
@@ -602,7 +628,7 @@ module.exports.updateUserInfo = async (user) => {
  * 查询所有的用户信息
  * */
 module.exports.getUser = async () => {
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + 'api/User',
         method: 'get',
         searchParams: {
@@ -623,7 +649,7 @@ module.exports.getUser = async () => {
  * @param {any} ids
  */
 module.exports.deleteUser = async (ids) => {
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + `api/User`,
         method: 'delete',
         body: JSON.stringify(ids),
@@ -640,7 +666,7 @@ module.exports.deleteUser = async (ids) => {
  * @param {any} type
  */
 module.exports.getCustomDataTitle = async (type) => {
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + 'api/CustomDataTitle/' + type,
         method: 'get',
         headers: {
@@ -656,7 +682,7 @@ module.exports.getCustomDataTitle = async (type) => {
  * @param {any} data 集合
  */
 module.exports.addOrUpdateCustomDataTitle = async (data) => {
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + `api/CustomDataTitle`,
         method: 'post',
         body: JSON.stringify(data),
@@ -668,13 +694,16 @@ module.exports.addOrUpdateCustomDataTitle = async (data) => {
     return body;
 };
 
+
+async function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 /**
  * 线程等待
  * @param {any} ms 毫秒
  */
-module.exports.sleep = (ms) => {
-    return new Promise(resolve => setTimeout(resolve, ms))
-}
+module.exports.sleep = sleep;
 
 /**
  * 获取一个随机字符串
@@ -698,7 +727,7 @@ module.exports.uuid = function (len, radix, append) {
  * @param {any} 通知消息
  */
 module.exports.set_group_whole_ban = async (groups, enable, notify) => {
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + `api/GroupManagement/set_group_whole_ban/${groups}/${enable}?notify=${notify}`,
         method: 'get',
         headers: {
@@ -721,7 +750,7 @@ module.exports.qinglong = {
      * @param {any} taskName 任务名称
      */
     getTask: async function (taskName) {
-        const body = await api({
+        const body = await apiExtend({
             url: serverAddres + `api/QLTask?Key=${taskName}&PageIndex=1&PageSize=999`,
             method: 'get',
             headers: {
@@ -735,7 +764,7 @@ module.exports.qinglong = {
      * @param {any} data 运行的任务信息，参数形式请参照方法内
      */
     runTask: async function (data) {
-        const body = await api({
+        const body = await apiExtend({
             url: serverAddres + `api/QLTask/run`,
             method: 'post',
             headers: {
@@ -754,8 +783,6 @@ module.exports.qinglong = {
     addEnvs: addQLEnvs
 }
 
-
-
 /**
  * 手动结束多步骤任务
  */
@@ -764,7 +791,7 @@ module.exports.finshStepCommandTask = async () => {
         console.log("无多步骤任务线程ID 信息，跳过。");
         return;
     }
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + `api/Task/finish/${process.env.StepCommandTaskThreadId}`,
         method: 'get',
         headers: {
@@ -783,7 +810,7 @@ module.exports.finshStepCommandTask = async () => {
  * */
 module.exports.deductionIntegral = async (USE_SCORE) => {
     var userId = process.env.user_id;
-    const body = await api({
+    const body = await apiExtend({
         url: serverAddres + `api/User/DeductionIntegral/${userId}/${USE_SCORE}`,
         headers: {
             'User-Agent': 'apifox/1.0.0 (https://www.apifox.cn)',
@@ -792,3 +819,98 @@ module.exports.deductionIntegral = async (USE_SCORE) => {
     }).json();
     return body;
 }
+
+var getProxyRetryCount = 0;
+
+async function getXMProxy() {
+    var XM_PROXY = process.env.XM_PROXY;
+    if (XM_PROXY == null) {
+        console.log("未配置熊  XM_PROXY API地址");
+        return null;
+    }
+    console.log("开始获取熊猫代理");
+    var result = null;
+    getProxyRetryCount++;
+    try {
+        var options = {
+            'method': 'get',
+            'url': XM_PROXY,
+            'headers': {
+                'Content-Type': 'application/json'
+            }
+        };
+        var response = await apiExtend(options);
+        console.log("获取代理IP结果：" + response.body);
+        result = JSON.parse(response.body);
+    } catch (e) {
+        console.log("熊猫代理获取异常，等待一下尝试重新获取");
+        await sleep(1200);
+        await getProxy();
+    }
+    if (getProxyRetryCount >= 10) {
+        console.log("获取代理错误次数超过10次，不再获取代理。")
+        return null;
+    }
+    if (result && result.code == "0" && result.obj) {
+        var proxy = result.obj[0];
+        getProxyRetryCount = 0
+        return {
+            ip: proxy.ip,
+            port: proxy.port,
+            expire: proxy.expire
+        };
+    } else if (result.code == "-102") {
+        console.log(result.msg)
+        await sleep(1200);
+        await getProxy();
+    }
+}
+
+async function getXKProxy() {
+    var XK_PROXY = process.env.XK_PROXY || "http://api2.xkdaili.com/tools/XApi.ashx?apikey=XK3ADBB87FDE01D92C97&qty=1&format=json&split=0&sign=cf955b8f84b47e97ff50e112773198d8&fmt=6";
+    if (XK_PROXY == null) {
+        console.log("未配置星空代理API地址。");
+        return null;
+    }
+    if (XK_PROXY.indexOf("&fmt=6") < 0) {
+        XK_PROXY += "&fmt=6";
+    }
+    var result = null;
+    getProxyRetryCount++;
+    try {
+        var options = {
+            'method': 'get',
+            'url': XK_PROXY,
+        };
+        var result = await apiExtend(options).json();
+    } catch (e) {
+        console.log("星空代理获取异常，尝试重新获取。");
+        await sleep(1000);
+        return await getXKProxy();
+    }
+    if (getProxyRetryCount >= 10) {
+        console.log("获取代理错误次数超过10次，不再获取代理。")
+        return null;
+    }
+    if (result && result.status == 100 && result.data) {
+        var proxy = result.data[0];
+        console.log("获取到星空代理：" + JSON.stringify(proxy))
+        getProxyRetryCount = 0
+        return proxy;
+    } else {
+        console.log("星空代理获取失败了：" + result.info)
+        await sleep(1000);
+        return await getXKProxy();
+    }
+}
+
+/**
+ * 获取熊猫代理IP
+ */
+module.exports.getXMProxy = getXMProxy;
+
+
+/**
+ * 获取星空代理IP
+ */
+module.exports.getXKProxy = getXKProxy;
