@@ -66,7 +66,7 @@ var failedCount = 0;
             await addOrUpdateJDCookie(convertResult.data, data.Data1, data.Data6);
         }
     }
-    updateCustomDatas(datas);
+    await updateCustomDatas(datas);
     await sendNotify(`wskey转换完成，成功：${successCount}，失效：${overdueCount}，转换失败：${failedCount}。`, true)
     if (successCount > 0) {
         console.log("开始同步环境变量到青龙。")

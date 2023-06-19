@@ -38,7 +38,7 @@ const apiExtend = got.extend({
                 options.headers.Authorization = "Bearer " + process.env.QuantumAssistantTemporaryToken;
                 if (options.url.toString().indexOf(process.env.serverAddres) != 0 && process.env.system_enable_proxy == "true" &&
                     request_proxy_white_list.filter((s) => options.url.toString().indexOf(s) > -1).length == 0) {
-                    if (proxyInfo == null || moment(proxyInfo.expire) < moment()) {
+                    if (proxyInfo == null || moment(proxyInfo.expire) <= moment().add(5,"s")) {
                         proxyInfo = await getXKProxy();
                         if (proxyInfo == null) {
                             proxyInfo = await getXMProxy();
@@ -58,6 +58,14 @@ const apiExtend = got.extend({
 });
 
 var proxyInfo = null;
+
+/**
+ * 由脚本判断代理是否可用，如不可用则调用该方法清除代理。
+ */
+module.exports.clearProxy = () => {
+    console.log("脚本手动清空代理。")
+    proxyInfo = null;
+}
 
 module.exports.api = apiExtend;
 
