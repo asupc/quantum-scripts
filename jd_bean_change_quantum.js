@@ -27,9 +27,6 @@ const {
     islogin, QueryJDUserInfo
 } = require('./jd_base');
 
-process.env.system_enable_proxy = "true"
-process.env.XK_PROXY = "http://api2.xkdaili.com/tools/XApi.ashx?apikey=XK3ADBB87FDE01D92C97&qty=1&format=json&split=0&sign=cf955b8f84b47e97ff50e112773198d8&fmt=6";
-
 !(async () => {
     var cookiesArr = await getCookies();
 
