@@ -88,7 +88,7 @@ async function QueryAccount(env) {
     if (day1 < 0) {
         day = 0;
     }
-    var overdue = `【您已挂机】${day}天
+    var overdue = `\n【您已挂机】${day}天
 【预计失效】${day1}天后，${overdueDate1.format("MM月DD日")}失效。`
 
     var loginState = true;
