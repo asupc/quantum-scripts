@@ -19,6 +19,10 @@ let QUERY_JD_USE_SCORE = (process.env.QUERY_JD_USE_SCORE || 0) * 1;
 let QUERY_JD_USE_SCORE_TYPE = process.env.QUERY_JD_USE_SCORE_TYPE * 1;
 let QUERY_JD_USE_SCORE_TIPS = process.env.QUERY_JD_USE_SCORE_TIPS || "查询积分不足。"
 
+let NO_CK_NOTIFY = process.env.NO_CK_NOTIFY || "未提交Cookie";
+
+
+
 const {
     sendNotify, getCookies, api, clearProxy, getUserInfo, deductionIntegral
 } = require('./quantum');
