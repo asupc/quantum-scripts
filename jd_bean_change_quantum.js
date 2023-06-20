@@ -32,10 +32,7 @@ const {
 var tryCount = 3;
 
 !(async () => {
-    //var cookiesArr = await getCookies();
-    var cookiesArr = [{
-        Value: "pt_key=app_openAAJkkUj0ADDNjvZGGnaApRagJYI5G6kqbu551QlPjCrKPKdnQE6SmYf7_wKyF9PPiH1Ou5NB-Ns;pt_pin=18690725682_p;"
-    }]
+    var cookiesArr = await getCookies();
     if (cookiesArr.length == 0) {
         console.log("没有Cookies信息结束任务。");
         await sendNotify(NO_CK_NOTIFY);
