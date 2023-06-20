@@ -27,6 +27,9 @@ const {
     islogin, QueryJDUserInfo
 } = require('./jd_base');
 
+//单个账号异常重试次数
+var tryCount = 3;
+
 !(async () => {
     var cookiesArr = await getCookies();
 
@@ -52,17 +55,20 @@ const {
     for (var ttt = 0; ttt < cookiesArr.length; ttt++) {
         var env = cookiesArr[ttt];
         var cookie = env.Value;
-        do {
+        for (var i = 0; i < tryCount; i++) {
             try {
                 await QueryAccount(env);
                 clearProxy();
                 break;
             }
             catch (e) {
-                console.log(cookie + "执行异常，再来一次：" + e.message);
+                console.log(`【${getPin(cookie)}】第${(i + 1)}次执行异常，再来一次：` + e.message);
+                if (i >= tryCount) {
+                    console.log(`【${getPin(cookie)}】执行异常重试上限。`);
+                }
                 clearProxy();
             }
-        } while (true);
+        }
     }
 })().catch(async (e) => {
     console.log("脚本执行异常：" + e.message);
