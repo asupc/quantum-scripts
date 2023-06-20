@@ -324,6 +324,7 @@ async function plantBean(cookie) {
             dateDesc: result.data.roundList[1].dateDesc
         }
     }
+    return {};
 }
 
 async function getCoupons(cookie) {
