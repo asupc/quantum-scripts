@@ -725,6 +725,8 @@ async function TotalBean(cookie) {
         msg += `,京享值${userInfo.JingXiang}`;
     }
     msg += `\n【当前京豆】${userInfo.beanCount}豆(≈${(userInfo.beanCount / 100).toFixed(2)}元)`;
+
+    return msg;
 }
 
 async function GoldBalance(cookie) {
