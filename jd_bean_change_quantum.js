@@ -14,13 +14,10 @@ const CryptoJS = require("crypto-js");
 const md5 = require("md5");
 const moment = require("moment")
 
-
 let QUERY_JD_USE_SCORE = (process.env.QUERY_JD_USE_SCORE || 0) * 1;
 let QUERY_JD_USE_SCORE_TYPE = process.env.QUERY_JD_USE_SCORE_TYPE * 1;
 let QUERY_JD_USE_SCORE_TIPS = process.env.QUERY_JD_USE_SCORE_TIPS || "查询积分不足。"
-
 let NO_CK_NOTIFY = process.env.NO_CK_NOTIFY || "未提交Cookie";
-
 
 
 const {
@@ -35,9 +32,10 @@ const {
 var tryCount = 3;
 
 !(async () => {
-    var cookiesArr = await getCookies();
-
-
+    //var cookiesArr = await getCookies();
+    var cookiesArr = [{
+        Value: "pt_key=app_openAAJkkUj0ADDNjvZGGnaApRagJYI5G6kqbu551QlPjCrKPKdnQE6SmYf7_wKyF9PPiH1Ou5NB-Ns;pt_pin=18690725682_p;"
+    }]
     if (cookiesArr.length == 0) {
         console.log("没有Cookies信息结束任务。");
         await sendNotify(NO_CK_NOTIFY);
@@ -73,7 +71,7 @@ var tryCount = 3;
             }
         }
     }
-})().catch(async (e) => {
+})().catch((e) => {
     console.log("脚本执行异常：" + e.message);
     console.log(e.stack)
 });
@@ -85,10 +83,14 @@ var tryCount = 3;
  */
 async function QueryAccount(env) {
     var cookie = env.Value;
+    var pin = getPin(cookie);
     var overdueDate = moment(env.CreateTime);
     var day = moment(new Date()).diff(overdueDate, 'day');
     var overdueDate1 = moment(env.UpdateTime).add(30, 'days');
     var day1 = overdueDate1.diff(new Date(), 'day');
+    if (day1 < 0) {
+        day = 0;
+    }
     var overdue = `【您已挂机】${day}天
 【预计失效】${day1}天后，${overdueDate1.format("MM月DD日")}失效。`
 
@@ -106,103 +108,73 @@ async function QueryAccount(env) {
         ss = false;
         return;
     }
-    var userInfo = await TotalBean(cookie);  //账户基本信息
-    var goldBalance = await GoldBalance(cookie); // 极速版金币
-    var PlustotalScore = 0;
-    if (!userInfo.isPlusVip) {
-        console.log("非plus会员不查询plus积分。");
-    } else {
-        PlustotalScore = await queryScores(cookie); //plus会员分
+    var msg = "【温馨提示】查询显示为0，京东接口限流，正常情况！";
+    try {
+        msg += await TotalBean(cookie);  //账户基本信息
+    } catch (e) {
+        console.log(`【${pin}】查询账户基本信息异常。`)
+        console.log(e.message)
     }
-    var redPackets = await redPacket(cookie); //红包】
-    var beanData = await bean(cookie);// 查询京豆
-    var cash = await jdCash(cookie); // 领现金
-    var jf = await hfjifen(cookie); //积分查询
-    var coupons = await getCoupons(cookie);  //优惠券
-    var plantBeans = await plantBean(cookie);//种豆得豆
-    var ecards = await ecard(cookie);
-    var fruit = await getjdfruit(cookie);
-    var healthScore = await health(cookie);
-
-    var msg = `【温馨提示】查询显示为0，京东接口限流，正常情况！
-【京东账号】${userInfo.nickName}`;
-
-    if (userInfo.JingXiang) {
-        if (userInfo.isRealNameAuth)
-            msg += `(已实名)\n`;
-        else
-            msg += `(未实名)\n`;
-        msg += `【账号信息】`;
-        if (userInfo.isPlusVip) {
-            msg += `Plus会员`;
-            if (PlustotalScore > 0)
-                msg += `(${PlustotalScore}分)`
-        } else {
-            msg += `普通会员`;
-        }
-        msg += `,京享值${userInfo.JingXiang}`;
+    try {
+        msg += await GoldBalance(cookie); // 极速版金币
+    } catch (e) {
+        console.log(`【${pin}】查询极速版金币信息异常。`)
+        console.log(e.message)
+    }
+    try {
+        msg += await redPacket(cookie); //红包
+    } catch (e) {
+        console.log(`【${pin}】查询红包信息异常。`)
+        console.log(e.message)
     }
 
-    if (beanData.todayIncomeBean != 0)
-        msg += `\n【今日京豆】收${beanData.todayIncomeBean || 0}豆`;
-
-    if (beanData.todayOutcomeBean != 0) {
-        msg += `,支${beanData.todayOutcomeBean}豆`;
+    try {
+        msg += await bean(cookie);// 查询京豆
+    } catch (e) {
+        console.log(`【${pin}】查询京豆信息异常。`)
+        console.log(e.message)
     }
-    msg += `\n【昨日京豆】收${beanData.incomeBean}豆`;
-
-    if (beanData.expenseBean != 0) {
-        msg += `,支${beanData.expenseBean}豆`;
+    try {
+        msg += await jdCash(cookie); // 领现金
+    } catch (e) {
+        console.log(`【${pin}】查询领现金信息异常。`)
+        console.log(e.message)
     }
-    msg += `\n【当前京豆】${userInfo.beanCount}豆(≈${(userInfo.beanCount / 100).toFixed(2)}元)\n`;
-
-    if (goldBalance) {
-        msg += `【特价金币】${goldBalance}币(≈${(goldBalance / 10000).toFixed(2)}元)\n`;
+    try {
+        msg += await hfjifen(cookie); //权益积分
+    } catch (e) {
+        console.log(`【${pin}】查询权益积分信息异常。`)
+        console.log(e.message)
     }
-
-    if (ecards) {
-        msg += `【礼卡余额】${ecards}\n`;
+    try {
+        msg += await getCoupons(cookie);  //优惠券
+    } catch (e) {
+        console.log(`【${pin}】查询优惠券信息异常。`)
+        console.log(e.message)
     }
-
-    if (cash) {
-        msg += `【签到现金】${cash}元\n`;
+    try {
+        msg += await plantBean(cookie);//种豆得豆
+    } catch (e) {
+        console.log(`【${pin}】查询种豆得豆信息异常。`)
+        console.log(e.message)
     }
-
-    if (jf) {
-        msg += `【积分签到】${jf}积分\n`;
+    try {
+        msg += await ecard(cookie);
+    } catch (e) {
+        console.log(`【${pin}】查询E卡信息异常。`)
+        console.log(e.message)
     }
-
-    if (healthScore) {
-        msg += `【健康社区】${healthScore}能量\n`
+    try {
+        msg += await getjdfruit(cookie);
+    } catch (e) {
+        console.log(`【${pin}】查询东东农场信息异常。`)
+        console.log(e.message)
     }
-
-    if (plantBeans.growth) {
-        msg += `【种豆得豆】${plantBeans.growth}成长值,${plantBeans.dateDesc}\n`
-    }
-
-    if (fruit.JdFarmProdName) {
-        if (fruit.JdtreeEnergy != 0) {
-            if (fruit.treeState === 2 || fruit.treeState === 3) {
-                msg += `【东东农场】${fruit.JdFarmProdName} 可以兑换了!\n`;
-                await sendNotify(`【${userInfo.nickName}】东东农场的【${fruit.JdFarmProdName}】已经可以兑换啦 `);
-            } else {
-                msg += `【东东农场】${fruit.JdFarmProdName}(${((fruit.JdtreeEnergy / fruit.JdtreeTotalEnergy) * 100).toFixed(0)}%),共种值${fruit.JdwinTimes}次,已浇水${fruit.farmInfo.farmUserPro.treeEnergy / 10}次,还需${(fruit.farmInfo.farmUserPro.treeTotalEnergy - fruit.farmInfo.farmUserPro.treeEnergy) / 10}次\n`;
-            }
-        } else {
-            if (fruit.treeState === 0) {
-                await sendNotify(`【{${userInfo.nickName}】东东农场水果领取后未重新种植 `);
-            } else if (fruit.treeState === 1) {
-                msg += `【东东农场】${fruit.JdFarmProdName}种植中,共种值${fruit.JdwinTimes}次\n`;
-            }
-        }
-    } else {
-        msg += `【东东农场】查询异常\n`;
-    }
-    if (coupons.message) {
-        msg += coupons.message;
-    }
-    if (redPackets.message) {
-        msg += redPackets.message;
+    try {
+        msg += await health(cookie);
+    } catch (e) {
+        console.log(`【${pin}】查询健康社区信息异常。`)
+        console.log(e.message)
     }
     if (overdue) {
         msg += overdue;
@@ -210,8 +182,6 @@ async function QueryAccount(env) {
     console.log(msg);
     await sendNotify(msg)
 }
-
-
 
 async function health(cookie) {
     let opts = {
@@ -226,7 +196,11 @@ async function health(cookie) {
         method: "post"
     }
     let data = await api(opts).json();
-    return data.data.result.userScore;
+
+    if (data.data && data.data.result && data.data.result) {
+        return `\n【健康社区】${data.data.result.userScore}能量`
+    }
+    return '';
 }
 
 async function getjdfruit(cookie) {
@@ -268,7 +242,27 @@ async function getjdfruit(cookie) {
     } else {
         console.log("东东农场信息获取异常：" + JSON.stringify(data));
     }
-    return result;
+    var msg = "\n";
+    var fruit = result;
+    if (fruit.JdFarmProdName) {
+        if (fruit.JdtreeEnergy != 0) {
+            if (fruit.treeState === 2 || fruit.treeState === 3) {
+                msg += `【东东农场】${fruit.JdFarmProdName} 可以兑换了!`;
+                await sendNotify(`【${userInfo.nickName}】东东农场的【${fruit.JdFarmProdName}】已经可以兑换啦 `);
+            } else {
+                msg += `【东东农场】${fruit.JdFarmProdName}(${((fruit.JdtreeEnergy / fruit.JdtreeTotalEnergy) * 100).toFixed(0)}%),共种值${fruit.JdwinTimes}次,已浇水${fruit.farmInfo.farmUserPro.treeEnergy / 10}次,还需${(fruit.farmInfo.farmUserPro.treeTotalEnergy - fruit.farmInfo.farmUserPro.treeEnergy) / 10}次`;
+            }
+        } else {
+            if (fruit.treeState === 0) {
+                await sendNotify(`【{${userInfo.nickName}】东东农场水果领取后未重新种植 `);
+            } else if (fruit.treeState === 1) {
+                msg += `【东东农场】${fruit.JdFarmProdName}种植中,共种值${fruit.JdwinTimes}次`;
+            }
+        }
+    } else {
+        msg += `【东东农场】查询异常`;
+    }
+    return msg;
 }
 
 async function ecard(cookie) {
@@ -301,7 +295,9 @@ async function ecard(cookie) {
         if (balEcard)
             ECardinfo = '共' + useable.length + '张E卡,合计' + parseFloat(balEcard).toFixed(2) + '元';
     }
-    return ECardinfo;
+    if (ECardinfo)
+        msg += `\n【礼卡余额】${ECardinfo}`;
+    return "";
 }
 
 //种豆成长值查询
@@ -317,16 +313,11 @@ async function plantBean(cookie) {
         method: "get"
     }
     var result = await api(options).json();
-
     if (result && result.data && result.data.roundList && result.data.roundList.length > 1) {
-        return {
-            growth: result.data.roundList[1].growth,
-            dateDesc: result.data.roundList[1].dateDesc
-        }
+        return `\n【种豆得豆】${result.data.roundList[1].growth}成长值,${result.data.roundList[1].dateDesc}`
     }
-    return {};
+    return '';
 }
-
 async function getCoupons(cookie) {
     let options = {
         url: `https://wq.jd.com/activeapi/queryjdcouponlistwithfinance?state=1&wxadd=1&filterswitch=1&_=${Date.now()}&sceneval=2&g_login_type=1&callback=jsonpCBKB&g_ty=ls`,
@@ -352,34 +343,31 @@ async function getCoupons(cookie) {
     result.todayEndTime = new Date(new Date(new Date().getTime()).setHours(23, 59, 59, 999)).getTime();
     result.tomorrowEndTime = new Date(new Date(new Date().getTime() + 24 * 60 * 60 * 1000).setHours(23, 59, 59, 999)).getTime();
     result.platFormInfo = "";
-    //console.log(useable);
     for (let i = 0; i < useable.length; i++) {
-        //console.log(useable[i]);
         if (useable[i].limitStr.indexOf('全品类') > -1) {
             result.beginTime = useable[i].beginTime;
             if (result.beginTime < new Date().getTime() && useable[i].quota < 20 && useable[i].coupontype === 1) {
-                //result.couponEndTime = new Date(parseInt(useable[i].endTime)).Format('yyyy-MM-dd');
                 result.couponName = useable[i].limitStr;
                 if (useable[i].platFormInfo)
                     result.platFormInfo = useable[i].platFormInfo;
                 var decquota = parseFloat(useable[i].quota).toFixed(2);
                 var decdisc = parseFloat(useable[i].discount).toFixed(2);
 
-                result.message += `【全品类券】满${decquota}减${decdisc}元`;
+                result.message += `\n【全品类券】满${decquota}减${decdisc}元`;
 
                 if (useable[i].endTime < result.todayEndTime) {
-                    result.message += `(今日过期,${result.platFormInfo})\n`;
+                    result.message += `(今日过期,${result.platFormInfo})`;
                 } else if (useable[i].endTime < result.tomorrowEndTime) {
-                    result.message += `(明日将过期,${result.platFormInfo})\n`;
+                    result.message += `(明日将过期,${result.platFormInfo})`;
                 } else {
-                    result.message += `(${result.platFormInfo})\n`;
+                    result.message += `\n(${result.platFormInfo})`;
                 }
             }
         }
         if (useable[i].couponTitle.indexOf('运费券') > -1 && useable[i].limitStr.indexOf('自营商品运费') > -1) {
             var item = useable[i];
             var endTime = moment(new Date(parseInt(useable[i].endTime))).format('YYYY-MM-DD');
-            result.message += `【运费券】${parseInt(item.discount)}元,过期(${endTime})\n`;
+            result.message += `\n【运费券】${parseInt(item.discount)}元,过期(${endTime})`;
         }
         if (useable[i].couponTitle.indexOf('极速版APP活动') > -1 && useable[i].limitStr == '仅可购买活动商品') {
             result.beginTime = useable[i].beginTime;
@@ -389,14 +377,14 @@ async function getCoupons(cookie) {
                 var decquota = parseFloat(useable[i].quota).toFixed(2);
                 var decdisc = parseFloat(useable[i].discount).toFixed(2);
 
-                result.message += `【极速版券】满${decquota}减${decdisc}元`;
+                result.message += `\n【极速版券】满${decquota}减${decdisc}元`;
 
                 if (useable[i].endTime < result.todayEndTime) {
-                    result.message += `(今日过期,${result.platFormInfo})\n`;
+                    result.message += `(今日过期,${result.platFormInfo})`;
                 } else if (useable[i].endTime < result.tomorrowEndTime) {
-                    result.message += `(明日将过期,${result.platFormInfo})\n`;
+                    result.message += `(明日将过期,${result.platFormInfo})`;
                 } else {
-                    result.message += `(${result.platFormInfo})\n`;
+                    result.message += `\n(${result.platFormInfo})`;
                 }
             }
         }
@@ -413,21 +401,21 @@ async function getCoupons(cookie) {
                 result.couponType = "白条优惠";
             }
             if (useable[i].discount < useable[i].quota)
-                result.message += `【${result.couponType}】满${useable[i].quota}减${useable[i].discount}元`;
+                result.message += `\n【${result.couponType}】满${useable[i].quota}减${useable[i].discount}元`;
             else
-                result.message += `【${result.couponType}】立减${useable[i].discount}元`;
+                result.message += `\n【${result.couponType}】立减${useable[i].discount}元`;
             if (useable[i].platFormInfo)
                 result.platFormInfo = useable[i].platFormInfo;
             if (useable[i].endTime < result.todayEndTime) {
-                result.message += `(今日过期,${result.platFormInfo})\n`;
+                result.message += `(今日过期,${result.platFormInfo})`;
             } else if (useable[i].endTime < result.tomorrowEndTime) {
-                result.message += `(明日将过期,${result.platFormInfo})\n`;
+                result.message += `(明日将过期,${result.platFormInfo})`;
             } else {
-                result.message += `(${result.platFormInfo})\n`;
+                result.message += `(${result.platFormInfo})`;
             }
         }
     }
-    return result;
+    return result.message;
 }
 
 async function hfjifen(cookie) {
@@ -448,7 +436,7 @@ async function hfjifen(cookie) {
         method: "post"
     }
     let data = await api(opts).json();
-    return data.data.balanceNum;
+    return `\n【积分签到】${data.data.balanceNum}积分`;
 }
 
 async function jdCash(cookie) {
@@ -472,9 +460,9 @@ async function jdCash(cookie) {
     var data = await api(options).json();
 
     if (data.code === 0 && data.data.result) {
-        return data.data.result.totalMoney || 0;
+        return `\n【签到现金】${data.data.result.totalMoney}元`;
     }
-    return 0;
+    return "";
 }
 
 async function bean(cookie) {
@@ -539,7 +527,20 @@ async function bean(cookie) {
     resultInfo.todayOutcomeBean = -resultInfo.todayOutcomeBean;
     resultInfo.expenseBean = -resultInfo.expenseBean;
 
-    return resultInfo;
+    var msg = ""
+
+    if (resultInfo.todayIncomeBean != 0)
+        msg += `\n【今日京豆】收${resultInfo.todayIncomeBean || 0}豆`;
+
+    if (resultInfo.todayOutcomeBean != 0) {
+        msg += `,支${resultInfo.todayOutcomeBean}豆`;
+    }
+    msg += `\n【昨日京豆】收${resultInfo.incomeBean}豆`;
+
+    if (resultInfo.expenseBean != 0) {
+        msg += `,支${resultInfo.expenseBean}豆`;
+    }
+    return msg;
 }
 
 async function redPacket(cookie) {
@@ -558,7 +559,7 @@ async function redPacket(cookie) {
         method: "get"
     }
     var data = await api(options).json();
-    var result = { message: "" };
+    var result = { message: " \n" };
     if (data) {
         result.jxRed = 0;
         result.jsRed = 0;
@@ -623,47 +624,48 @@ async function redPacket(cookie) {
         result.jdwxRed = result.jdwxRed.toFixed(2);
         result.jdGeneralRed = result.jdGeneralRed.toFixed(2);
         result.expiredBalance = (result.jxRedExpire + result.jsRedExpire + result.jdRedExpire + result.jdhRedExpire + result.jdwxRedExpire + result.jdGeneralRedExpire).toFixed(2);
-        result.message += `【红包总额】${result.balance}(总过期${result.expiredBalance})元 \n`;
+        result.message += `【红包总额】${result.balance}(总过期${result.expiredBalance})元 `;
         if (result.jxRed > 0) {
             if (result.jxRedExpire > 0)
-                result.message += `【京喜红包】${result.jxRed}(将过期${result.jxRedExpire.toFixed(2)})元 \n`;
+                result.message += ` \n【京喜红包】${result.jxRed}(将过期${result.jxRedExpire.toFixed(2)})元`;
             else
-                result.message += `【京喜红包】${result.jxRed}元 \n`;
+                result.message += ` \n【京喜红包】${result.jxRed}元`;
         }
         if (result.jsRed > 0) {
             if (result.jsRedExpire > 0)
-                result.message += `【京喜特价】${result.jsRed}(将过期${result.jsRedExpire.toFixed(2)})元(原极速版) \n`;
+                result.message += ` \n【京喜特价】${result.jsRed}(将过期${result.jsRedExpire.toFixed(2)})元(原极速版)`;
             else
-                result.message += `【京喜特价】${result.jsRed}元(原极速版) \n`;
+                result.message += ` \n【京喜特价】${result.jsRed}元(原极速版)`;
         }
         if (result.jdRed > 0) {
             if (result.jdRedExpire > 0)
-                result.message += `【京东红包】${result.jdRed}(将过期${result.jdRedExpire.toFixed(2)})元 \n`;
+                result.message += ` \n【京东红包】${result.jdRed}(将过期${result.jdRedExpire.toFixed(2)})元`;
             else
-                result.message += `【京东红包】${result.jdRed}元 \n`;
+                result.message += ` \n【京东红包】${result.jdRed}元`;
         }
         if (result.jdhRed > 0) {
             if (result.jdhRedExpire > 0)
-                result.message += `【健康红包】${result.jdhRed}(将过期${result.jdhRedExpire.toFixed(2)})元 \n`;
+                result.message += ` \n【健康红包】${result.jdhRed}(将过期${result.jdhRedExpire.toFixed(2)})元`;
             else
-                result.message += `【健康红包】${result.jdhRed}元 \n`;
+                result.message += ` \n【健康红包】${result.jdhRed}元`;
         }
         if (result.jdwxRed > 0) {
             if (result.jdwxRedExpire > 0)
-                result.message += `【微信小程序】${result.jdwxRed}(将过期${result.jdwxRedExpire.toFixed(2)})元 \n`;
+                result.message += ` \n【微信小程序】${result.jdwxRed}(将过期${result.jdwxRedExpire.toFixed(2)})元`;
             else
-                result.message += `【微信小程序】${result.jdwxRed}元 \n`;
+                result.message += ` \n【微信小程序】${result.jdwxRed}元`;
         }
         if (result.jdGeneralRed > 0) {
             if (result.jdGeneralRedExpire > 0)
-                result.message += `【全平台通用】${result.jdGeneralRed}(将过期${result.jdGeneralRedExpire.toFixed(2)})元 \n`;
+                result.message += ` \n【全平台通用】${result.jdGeneralRed}(将过期${result.jdGeneralRedExpire.toFixed(2)})元`;
             else
-                result.message += `【全平台通用】${result.jdGeneralRed}元 \n`;
+                result.message += ` \n【全平台通用】${result.jdGeneralRed}元 `;
         }
+        return result.message;
     } else {
         console.log(`京东服务器返回空数据`)
+        return "";
     }
-    return result;
 }
 async function getJingBeanBalanceDetail(cookie, page) {
     const options = {
@@ -696,13 +698,36 @@ async function queryScores(cookie) {
 
 async function TotalBean(cookie) {
     var data = await QueryJDUserInfo(cookie);
-    return {
+    var userInfo = {
         nickName: (data['base'] && data['base'].nickname) || getPin(cookie),
         isPlusVip: data['isPlusVip'],
         isRealNameAuth: data['isRealNameAuth'],
         beanCount: (data['base'] && data['base'].jdNum) || 0,
         JingXiang: (data['base'] && data['base'].jvalue) || 0,
     }
+
+    var PlustotalScore = 0;
+    if (userInfo.isPlusVip) {
+        PlustotalScore = await queryScores(cookie); //plus会员分
+    }
+    msg = `\n【京东账号】${userInfo.nickName}`;
+    if (userInfo.JingXiang) {
+        if (userInfo.isRealNameAuth)
+            msg += `(已实名)`;
+        else
+            msg += `(未实名)`;
+        msg += `【账号信息】`;
+        if (userInfo.isPlusVip) {
+            msg += `Plus会员`;
+            if (PlustotalScore > 0)
+                msg += `(${PlustotalScore}分)`
+        } else {
+            msg += `普通会员`;
+            msg += `普通会员`;
+        }
+        msg += `,京享值${userInfo.JingXiang}`;
+    }
+    msg += `\n【当前京豆】${userInfo.beanCount}豆(≈${(userInfo.beanCount / 100).toFixed(2)}元)`;
 }
 
 async function GoldBalance(cookie) {
@@ -717,7 +742,10 @@ async function GoldBalance(cookie) {
     options.method = "get";
     options.headers["cookie"] = cookie;
     var data = await api(options).json();
-    return data.data.goldBalance;
+    var goldBalance = data.data.goldBalance;
+    if (goldBalance)
+        return `\n【特价金币】${goldBalance} 币(≈${(goldBalance / 10000).toFixed(2)}元)`
+    return ""
 }
 
 function getPin(cookie) {
