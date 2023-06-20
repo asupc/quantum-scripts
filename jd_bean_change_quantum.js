@@ -44,7 +44,6 @@ var tryCount = 3;
         return;
     }
 
-
     if (QUERY_JD_USE_SCORE > 0) {
         var user = (await getUserInfo()) || {};
         var deductionScore = QUERY_JD_USE_SCORE_TYPE == 1 ? QUERY_JD_USE_SCORE : cookiesArr.length * QUERY_JD_USE_SCORE;
@@ -318,9 +317,12 @@ async function plantBean(cookie) {
         method: "get"
     }
     var result = await api(options).json();
-    return {
-        growth: result.data.roundList[1].growth,
-        dateDesc: result.data.roundList[1].dateDesc
+
+    if (result && result.data && result.data.roundList && result.data.roundList.length > 1) {
+        return {
+            growth: result.data.roundList[1].growth,
+            dateDesc: result.data.roundList[1].dateDesc
+        }
     }
 }
 
