@@ -713,13 +713,12 @@ async function TotalBean(cookie) {
             msg += `(已实名)`;
         else
             msg += `(未实名)`;
-        msg += `【账号信息】`;
+        msg += `\n【账号信息】`;
         if (userInfo.isPlusVip) {
             msg += `Plus会员`;
             if (PlustotalScore > 0)
                 msg += `(${PlustotalScore}分)`
         } else {
-            msg += `普通会员`;
             msg += `普通会员`;
         }
         msg += `,京享值${userInfo.JingXiang}`;
