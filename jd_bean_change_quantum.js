@@ -38,7 +38,6 @@ var tryCount = 3;
         await sendNotify(NO_CK_NOTIFY);
         return;
     }
-
     if (QUERY_JD_USE_SCORE > 0) {
         var user = (await getUserInfo()) || {};
         var deductionScore = QUERY_JD_USE_SCORE_TYPE == 1 ? QUERY_JD_USE_SCORE : cookiesArr.length * QUERY_JD_USE_SCORE;
@@ -56,7 +55,6 @@ var tryCount = 3;
         for (var i = 0; i < tryCount; i++) {
             try {
                 await QueryAccount(env);
-                clearProxy();
                 break;
             }
             catch (e) {
@@ -64,7 +62,6 @@ var tryCount = 3;
                 if (i >= tryCount) {
                     console.log(`【${getPin(cookie)}】执行异常重试上限。`);
                 }
-                clearProxy();
             }
         }
     }

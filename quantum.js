@@ -29,16 +29,44 @@ if (process.env.request_proxy_white_list) {
         request_proxy_white_list.push(item)
     })
 }
+request_proxy_white_list.push(serverAddres)
+
+var retryReponseCodes = ['401', '403', '500', '503']
 
 const apiExtend = got.extend({
     retry: { limit: 0 },
     hooks: {
+        beforeError: [
+            (error) => {
+                debugger
+                console.log(`请求时出现异常：
+错误代码：【${error.code}】
+请求地址：【${error.options.method} ：${error.request.options.url}】
+异常信息：【${error.message}】`)
+                if (process.env.system_enable_proxy == "true" && request_proxy_white_list.filter((s) => error.request.options.url.toString().indexOf(s) > -1).length == 0 && proxyInfo) {
+                    console.log("当前请求使用了代理IP，清理该代理：" + proxyInfo.ip)
+                    this.clearProxy();
+                }
+                if (retryReponseCodes.filter(n => error.message.indexOf(n) > -1).length > 0) {
+                    if (!error.request.options.retryCount) {
+                        error.request.options.retryCount = 0;
+                    }
+                    if (error.request.options.retryCount == 0) {
+                        console.log("对当前请求发起一次重试。")
+                        error.request.options.retryCount++;
+                        return apiExtend(error.request.options)
+                    }
+                }
+                throw error;
+            }
+        ],
         beforeRequest: [
             async options => {
-                options.headers.Authorization = "Bearer " + process.env.QuantumAssistantTemporaryToken;
-                if (options.url.toString().indexOf(process.env.serverAddres) != 0 && process.env.system_enable_proxy == "true" &&
-                    request_proxy_white_list.filter((s) => options.url.toString().indexOf(s) > -1).length == 0) {
-                    if (proxyInfo == null || moment(proxyInfo.expire) <= moment().add(5,"s")) {
+                if (process.env.QuantumAssistantTemporaryToken) {
+                    options.headers.Authorization = "Bearer " + process.env.QuantumAssistantTemporaryToken;
+                }
+                if (process.env.system_enable_proxy == "true" && request_proxy_white_list.filter((s) => options.url.toString().indexOf(s) > -1).length == 0) {
+                    if (proxyInfo == null || moment(proxyInfo.expire) <= moment().add(5, "s")) {
                         proxyInfo = await getXKProxy();
                         if (proxyInfo == null) {
                             proxyInfo = await getXMProxy();
@@ -63,7 +91,6 @@ var proxyInfo = null;
  * 由脚本判断代理是否可用，如不可用则调用该方法清除代理。
  */
 module.exports.clearProxy = () => {
-    console.log("脚本手动清空代理。")
     proxyInfo = null;
 }
 
@@ -835,6 +862,13 @@ async function getXMProxy() {
     if (XM_PROXY == null) {
         console.log("未配置熊  XM_PROXY API地址");
         return null;
+    }
+    ///http://pandavip.xiongmaodaili.com/xiongmao-web/apiPlus/vgl?secret=&orderNo=&count={0}&isTxt=0&proxyType=1&validTime=1&removal=1&cityIds=
+    if (XM_PROXY.indexOf("validTime") < 0) {
+        XM_PROXY += "&validTime=1"
+    }
+    if (XM_PROXY.indexOf("count") < 0) {
+        XM_PROXY += "&count=1"
     }
     console.log("开始获取熊猫代理");
     var result = null;
