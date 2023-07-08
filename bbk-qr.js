@@ -34,7 +34,6 @@ let timeOut = 180;
 let serverPath = ""
 
 !(async () => {
-
     if (process.env.command.indexOf("京东") > -1) {
         if (!process.env.bbk_qr_url_jd) {
             console.log("未配置BBK wskey 扫码服务地址，环境变量名称：bbk_qr_url_jd");
@@ -133,7 +132,7 @@ async function getWeixinQR() {
     qrc = (response.headers["set-cookie"][0] + ";").match(/usr_=([^; ]+)(?=;?)/)[1]
     console.log("会话Cookie：" + qrc)
 
-    if (type == "微信") {
+    if (type == "微信" || type == "京东") {
         var imgData = response.body['data']['qr'];
         var base64Data = imgData.replace(/^data:image\/\w+;base64,/, "");
         var Readable = require('stream').Readable
