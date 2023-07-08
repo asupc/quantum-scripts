@@ -33,7 +33,7 @@
   },
   {
     "Name": "BBK扫码获取wskey",
-    "Command": "微信扫码|京东扫码",
+    "Command": "微信扫码|京东扫码|口令登录",
     "ConcCount": 0,
     "CommandEnv": null,
     "Cron": null,

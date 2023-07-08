@@ -42,7 +42,11 @@ let serverPath = ""
         }
         bbk_qr_url = process.env.bbk_qr_url_jd;
         type = "京东";
-    } else if (!process.env.bbk_qr_url) {
+    }
+    else if (process.env.command.indexOf("口令") > -1) {
+        type = "口令";
+    }
+    else if (!process.env.bbk_qr_url) {
         console.log("未配置BBK wskey 扫码服务地址，环境变量名称：bbk_qr_url");
         return false;
     }
@@ -68,7 +72,6 @@ let serverPath = ""
     }
     t = Date.now();
     await getWeixinQR();
-
     if (qrc) {
         do {
             await sleep(3000);
@@ -121,34 +124,39 @@ async function getWeixinQR() {
         }
     };
     const response = await api(config);
-
-
     if (response.body.code === 500) {
         await sendNotify("获取二维码异常，请稍后重试。");
         return false;
     }
     console.log("获取二维码信息成功！")
-    var imgData = response.body['data']['qr'];
-    timeOut = response.body['data']['timeout'];
-    qrc = (response.headers["set-cookie"][0] + ";").match(/usr_=([^; ]+)(?=;?)/)[1]
-    console.log("会话Cookie：" + qrc)
-    var base64Data = imgData.replace(/^data:image\/\w+;base64,/, "");
-    var Readable = require('stream').Readable
-    const imgBuffer = Buffer.from(base64Data, 'base64')
-    var s = new Readable()
-    s.push(imgBuffer)
-    s.push(null)
-    var path = filePath + "/qr_" + t + ".png"
-    s.pipe(fs.createWriteStream(path));
-    console.log("保存二维码图片到本地：" + path);
 
-    await sendNotify([{
-        MessageType: 2,
-        msg: `${serverPath}/qr_${t}.png`
-    }, {
-        MessageType: 1,
-        msg: `请使用${type}扫描二维码并确认登录。`
-    }]);
+    if (type == "微信") {
+        var imgData = response.body['data']['qr'];
+        timeOut = response.body['data']['timeout'];
+        qrc = (response.headers["set-cookie"][0] + ";").match(/usr_=([^; ]+)(?=;?)/)[1]
+        console.log("会话Cookie：" + qrc)
+        var base64Data = imgData.replace(/^data:image\/\w+;base64,/, "");
+        var Readable = require('stream').Readable
+        const imgBuffer = Buffer.from(base64Data, 'base64')
+        var s = new Readable()
+        s.push(imgBuffer)
+        s.push(null)
+        var path = filePath + "/qr_" + t + ".png"
+        s.pipe(fs.createWriteStream(path));
+        console.log("保存二维码图片到本地：" + path);
+
+        await sendNotify([{
+            MessageType: 2,
+            msg: `${serverPath}/qr_${t}.png`
+        }, {
+            MessageType: 1,
+            msg: `请使用${type}扫描二维码并确认登录。`
+        }]);
+    }
+    else if (type == "口令") {
+        await sendNotify(`复制口令：${response.body.data.kouling}
+到京东APP确认登录`);
+    }
 }
 
 /**
@@ -196,10 +204,9 @@ ${regResult[1]}`);
             await sendNotify(tps);
             return false;
         }
-
         console.log(`扫码获取到wskey：${wskey}`);
         console.log("开始将wskey转换成app_open格式：" + wskey)
-        var convertResult = await convertWskey(wskey, type == "京东" ? "是" : "否");
+        var convertResult = await convertWskey(wskey, type == "京东" || type == "口令" ? "是" : "否");
         if (!convertResult.success || convertResult.data.indexOf("pt_key=app_open") < 0) {
             console.log("wskey转换失败了。");
             await sendNotify(tps);
