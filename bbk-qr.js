@@ -229,7 +229,7 @@ ${regResult[1]}`);
         var key = wskey.match(/wskey=([^; ]+)(?=;?)/)[1]
         var pin = wskey.match(/pin=([^; ]+)(?=;?)/)[1]
 
-        await addOrUpdateWskey(key, pin, userInfo.data.userInfo.baseInfo.nickname, type == "京东" ? "是" : "否")
+        await addOrUpdateWskey(key, pin, userInfo.data.userInfo.baseInfo.nickname, type == "京东" || type == "口令" ? "是" : "否")
         console.log("开始处理提交JDCOOKIE：" + convertResult.data)
         await addOrUpdateJDCookie(convertResult.data, process.env.user_id, userInfo.data.userInfo.baseInfo.nickname);
         await sendNotify(msg);
