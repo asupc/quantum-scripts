@@ -45,14 +45,13 @@ let serverPath = ""
     }
     else if (process.env.command.indexOf("口令") > -1) {
         type = "口令";
+        bbk_qr_url = process.env.bbk_qr_url_jd;
     }
     else if (!process.env.bbk_qr_url) {
         console.log("未配置BBK wskey 扫码服务地址，环境变量名称：bbk_qr_url");
         return false;
     }
     console.log("扫码登录类型：" + type)
-
-
     const body = await api({
         url: serverAddres + `api/SystemConfig`,
         method: 'get',
@@ -130,11 +129,12 @@ async function getWeixinQR() {
     }
     console.log("获取二维码信息成功！")
 
+    timeOut = response.body['data']['timeout'];
+    qrc = (response.headers["set-cookie"][0] + ";").match(/usr_=([^; ]+)(?=;?)/)[1]
+    console.log("会话Cookie：" + qrc)
+
     if (type == "微信") {
         var imgData = response.body['data']['qr'];
-        timeOut = response.body['data']['timeout'];
-        qrc = (response.headers["set-cookie"][0] + ";").match(/usr_=([^; ]+)(?=;?)/)[1]
-        console.log("会话Cookie：" + qrc)
         var base64Data = imgData.replace(/^data:image\/\w+;base64,/, "");
         var Readable = require('stream').Readable
         const imgBuffer = Buffer.from(base64Data, 'base64')
@@ -144,7 +144,6 @@ async function getWeixinQR() {
         var path = filePath + "/qr_" + t + ".png"
         s.pipe(fs.createWriteStream(path));
         console.log("保存二维码图片到本地：" + path);
-
         await sendNotify([{
             MessageType: 2,
             msg: `${serverPath}/qr_${t}.png`
