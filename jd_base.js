@@ -10,6 +10,8 @@ const { disableEnvs, sendNotify, addEnvs, allEnvs, api, getCustomData, updateCus
 } = require('./quantum');
 
 const wskeyCustomDataType = "wskey_record";
+const ProCustomDataType = "Prowskey_record";
+
 const moment = require('moment');
 /**
  * 检查京东ck登录状态
@@ -326,7 +328,6 @@ module.exports.addWskeyCustomDataTitle = async () => {
  * name 为提示标题
  * value 为天数
  * */
-
 module.exports.sntypes = [{
     "name": "1天",
     "value": 1,
@@ -349,4 +350,95 @@ module.exports.sntypes = [{
     "key": "5"
 }];
 
+
+
+/**
+ * 将wskey 转换成 app_open
+ * wskey 转换服务可以替换成其他的，兼容标准的服务
+ * 或者根据自己服务调整此处代码即可
+ * @param {any} wskey
+ */
+module.exports.ProWskey = async (wskey) => {
+    var data = JSON.stringify({
+        "botApitoken": process.env.Pro_BotApiToken,
+        "wskey": wskey
+    });
+    try {
+        const options = {
+            url: process.env.Pro_URL + "/env/wskey",
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            method: 'post',
+            body: data
+        }
+        const body = await api(options).json();
+        console.log("ProWskey 转换结果：" + JSON.stringify(body));
+        if (body.success) {
+            return {
+                success: true,
+                data: body.data.appck
+            }
+        } else {
+            console.log("ProWskey 转换失败，可能是转换服务IP黑了");
+        }
+    }
+    catch (e) {
+        console.log("ProWskey 转换 app_open出现了异常！");
+    }
+    return {
+        success: false
+    };
+}
+
+
+/**
+ * 添加或更新wskey 到自定义数据表中
+ * @param {any} wskey key
+ * @param {any} pin pin
+ * @param {any} nickname 京东账号昵称
+ */
+module.exports.addOrUpdateProWskey = async (wskey, pin, nickname) => {
+    console.log("开始提交ProWskey到自定义数据中");
+    var customDatas = await getCustomData(ProCustomDataType, null, null, { Data5: pin })
+    var customData = {
+        Type: ProCustomDataType,
+        Data1: process.env.user_id,
+        Data2: process.env.CommunicationUserName,
+        Data3: process.env.CommunicationUserId,
+        Data4: wskey,
+        Data5: pin,
+        Data6: `wskey=${wskey};pin=${pin};`,
+        Data7: nickname,
+        Data8: await getJD_COOKIE_Pin_status(pin) ? "是" : "否",
+        Data9: moment().format("YYYY-MM-DD HH:mm:ss"),
+    }
+    if (customDatas && customDatas.length > 0) {
+        console.log("更新ProWskey信息到自定义数据中");
+        customData.Id = customDatas[0].Id;
+        await updateCustomData(customData);
+    }
+    else {
+        var result = await addCustomData([customData]);
+        console.log("新增ProWskey信息到自定义数据中，提交结果" + JSON.stringify(result));
+    }
+}
+
+module.exports.addProWskeyCustomDataTitle = async () => {
+    await addOrUpdateCustomDataTitle({
+        Type: ProCustomDataType,
+        TypeName: "Pro_wskey",
+        Title1: "用户ID",
+        Title2: "用户昵称",
+        Title3: "QQ/WX",
+        Title4: "wskey",
+        Title5: "pin",
+        Title6: "完整wskey",
+        Title7: "账号名称",
+        Title8: "是否有效",
+        Title9: "转换时间"
+    })
+}
+
 module.exports.wskeyCustomDataType = wskeyCustomDataType;
+module.exports.ProCustomDataType = ProCustomDataType;
