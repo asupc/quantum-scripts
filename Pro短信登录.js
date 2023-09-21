@@ -22,8 +22,11 @@ let Pro_URL = process.env.Pro_URL;
 let Pro_BotApiToken = process.env.Pro_BotApiToken;
 
 var cookies = [];
-const { addOrUpdateJDCookie, sendNotify, getUserInfo, uuid, api, deductionIntegral, finshStepCommandTask, QueryJDUserInfo
+const { addOrUpdateJDCookie, sendNotify, getUserInfo, uuid, api, deductionIntegral, finshStepCommandTask, 
 } = require('./quantum');
+
+const { QueryJDUserInfo
+} = require('./jd_base');
 
 !(async () => {
     user = (await getUserInfo()) || {};
