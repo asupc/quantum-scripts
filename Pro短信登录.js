@@ -22,7 +22,7 @@ let Pro_URL = process.env.Pro_URL;
 let Pro_BotApiToken = process.env.Pro_BotApiToken;
 
 var cookies = [];
-const { addOrUpdateJDCookie, sendNotify, getUserInfo, uuid, api, deductionIntegral, finshStepCommandTask
+const { addOrUpdateJDCookie, sendNotify, getUserInfo, uuid, api, deductionIntegral, finshStepCommandTask, QueryJDUserInfo
 } = require('./quantum');
 
 !(async () => {
@@ -63,7 +63,7 @@ const { addOrUpdateJDCookie, sendNotify, getUserInfo, uuid, api, deductionIntegr
             console.log(message)
             var result = await verifyCode();
             if (!result.VerifyCodeSuccess) {
-                if (result.VerifyCodeErrorMessage.indexOf("需实名认证")) {
+                if (result.VerifyCodeErrorMessage.indexOf("需实名认证") > 1) {
                     await sendNotify("您的账号未实名认证，无法通过该方法登录。");
                     await finshStepCommandTask();
                     return false;
@@ -71,7 +71,6 @@ const { addOrUpdateJDCookie, sendNotify, getUserInfo, uuid, api, deductionIntegr
                 await sendNotify(result.VerifyCodeErrorMessage);
                 return false;
             }
-            await finshStepCommandTask();
         } else if (Phone) {
             console.log(`收到${user_id}手机号,${Phone}，开始请求Pro 服务`);
             if (await SendSMS()) {
@@ -82,11 +81,10 @@ const { addOrUpdateJDCookie, sendNotify, getUserInfo, uuid, api, deductionIntegr
             }
             return false;
         } else {
-            await sendNotify("Pro已经部署，请输入您的手机号码：");
+            await sendNotify("请输入您的手机号码：");
             return;
         }
     }
-
     console.log("触发指令信息：" + ADD_COOKIE);
     for (let i = 0; i < cookies.length; i++) {
         var cookie = cookies[i];
@@ -157,9 +155,12 @@ const { addOrUpdateJDCookie, sendNotify, getUserInfo, uuid, api, deductionIntegr
 京东昵称：${jdInfo.base.nickname}`);
         }
     }
+
+    await finshStepCommandTask();
 })()
-    .catch((e) => {
-        console.log("出现异常");
+    .catch(async (e) => {
+        console.log("出现异常:" + e);
+        await finshStepCommandTask();
     })
 
 async function verifyCode() {
@@ -175,8 +176,6 @@ async function verifyCode() {
             "Content-Type": "application/json"
         }
     }
-
-
     var result = {
         VerifyCodeSuccess: false
     };
@@ -186,8 +185,7 @@ async function verifyCode() {
         console.log("VerifyCode Data：" + JSON.stringify(data))
         if (data.success) {
             result.VerifyCodeSuccess = true;
-            cookies = [];
-            cookies.push(JSON.stringify(data.data.ck));
+            cookies.push(JSON.stringify(data));
             console.log("VerifyCode Success！")
         } else if (data.data && data.data.status == 555) {
             result.VerifyCodeSuccess = false;
