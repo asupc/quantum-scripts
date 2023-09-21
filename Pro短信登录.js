@@ -63,11 +63,6 @@ const { addOrUpdateJDCookie, sendNotify, getUserInfo, uuid, api, deductionIntegr
             console.log(message)
             var result = await verifyCode();
             if (!result.VerifyCodeSuccess) {
-                if (result.VerifyCodeErrorMessage.indexOf("需实名认证") > 1) {
-                    await sendNotify("您的账号未实名认证，无法通过该方法登录。");
-                    await finshStepCommandTask();
-                    return false;
-                }
                 await sendNotify(result.VerifyCodeErrorMessage);
                 return false;
             }
