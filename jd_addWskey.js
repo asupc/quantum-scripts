@@ -23,9 +23,15 @@ let pin = '';
         if (!wskey) {
             continue;
         }
-        if (wskey.indexOf("pin") < 0) {
-            console.log(` 提交的信息【${wskey}】缺少pin信息。`)
+        let userInfo = await GetJDUserInfoUnion(wskey);
+
+        if (!userInfo || !userInfo.data || userInfo.retcode != "0") {
+            await sendNotify(`wskey似乎失效了：【${wskey}】`);
             continue;
+        }
+        if (wskey.indexOf("pin") < 0) {
+            pin = userInfo.data.userInfo.baseInfo.curPin;
+            wskey = `pin=${pin};${wskey};`
         }
         wskey = wskey.replace(/[\r\n]/g, "");
         try {
@@ -49,14 +55,11 @@ let pin = '';
             await sendNotify(`wskey提交失败：【${wskey}】`);
             continue;
         }
-        var cookie = convertResult.data;
-        console.log("开始获取京东账户基本信息");
-        var userInfo = await GetJDUserInfoUnion(cookie)
-        console.log("获取京东账户基本信息结果：" + JSON.stringify(userInfo));
-        if (!userInfo || !userInfo.data || userInfo.retcode != "0") {
-            sendNotify(`wskey似乎失效了：【${wskey}】`);
-            continue;
-        }
+        //var cookie = convertResult.data;
+        //console.log("开始获取京东账户基本信息");
+        //var userInfo = await GetJDUserInfoUnion(cookie)
+        //console.log("获取京东账户基本信息结果：" + JSON.stringify(userInfo));
+
         var msg = `提交成功辣！
 账号昵称：${userInfo.data.userInfo.baseInfo.nickname}
 用户等级：${userInfo.data.userInfo.baseInfo.levelName}
@@ -67,4 +70,6 @@ let pin = '';
         console.log("开始处理提交JDCOOKIE：" + convertResult.data)
         await addOrUpdateJDCookie(convertResult.data, user_id, userInfo.data.userInfo.baseInfo.nickname);
     }
-})().catch((e) => { console.log("脚本异常：" + e); });
+})().catch((e) => {
+    console.log("脚本异常：" + e);
+});
