@@ -28,8 +28,8 @@ var failedCount = 0;
     await sendNotify(m1, true)
     for (var i = 0; i < datas.length; i++) {
         var data = datas[i];
-        if (data.Data8 && moment(data.Data8).add(WSKEY_MIN_CONVERT_HOUR, 'hours') > moment()) {
-            console.log(`pin：${data.Data5}，上一次成功转换时间：${data.Data8}，未超过：${WSKEY_MIN_CONVERT_HOUR}小时，跳过转换。`)
+        if (data.Data9 && moment(data.Data9).add(WSKEY_MIN_CONVERT_HOUR, 'hours') > moment()) {
+            console.log(`pin：${data.Data5}，上一次成功转换时间：${data.Data9}，未超过：${WSKEY_MIN_CONVERT_HOUR}小时，跳过转换。`)
             var data2 = await allEnvs(data.Data5, 2, true);
             if (data2.length == 0) {
                 console.log(`在环境变量中未找到有效的 pt_pin为${data.Data5}的 JD_COOKIE，还是要转换。`);
@@ -51,16 +51,16 @@ var failedCount = 0;
             var msg = `Pro_wskey失效了，账户昵称：【${data.Data6 || "-"}】，pin：【${data.Data5}】`
             console.log(msg);
             console.log("开始禁用失效Pro_wskey。")
-            data.Data7 = "否";
+            data.Data8 = "否";
             overdueCount += 1;
         } else {
             successCount += 1;
             console.log("开始处理提交JDCOOKIE：" + convertResult.data)
-            data.Data8 = moment().format("YYYY-MM-DD HH:mm:ss");
-            await addOrUpdateJDCookie(convertResult.data, data.Data1, data.Data6);
+            data.Data9 = moment().format("YYYY-MM-DD HH:mm:ss");
+            await addOrUpdateJDCookie(convertResult.data, data.Data1, data.Data7);
         }
     }
-    updateCustomDatas(datas);
+    await updateCustomDatas(datas);
     await sendNotify(`ProWskey 转换完成，成功：${successCount}，失效：${overdueCount}，转换失败：${failedCount}。`, true)
     if (successCount > 0) {
         console.log("开始同步环境变量到青龙。")
