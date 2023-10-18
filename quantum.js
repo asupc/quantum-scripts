@@ -1,10 +1,9 @@
-﻿
-const got = require('got');
+﻿const got = require('got');
 const moment = require('moment');
 var HttpsProxyAgent = require("https-proxy-agent");
 process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = 0;
 
-console.log("脚本库更新时间：2023年06月16日");
+console.log("脚本库更新时间：2023年10月18日");
 //------------- 量子助手系统环境变量部分 -------------
 
 if (!process.env.serverAddres) {
@@ -29,6 +28,7 @@ if (process.env.request_proxy_white_list) {
         request_proxy_white_list.push(item)
     })
 }
+
 request_proxy_white_list.push(serverAddres)
 
 var retryReponseCodes = ['401', '403', '500', '503']
@@ -38,7 +38,6 @@ const apiExtend = got.extend({
     hooks: {
         beforeError: [
             (error) => {
-                debugger
                 console.log(`请求时出现异常：
 错误代码：【${error.code}】
 请求地址：【${error.options.method} ：${error.request.options.url}】
@@ -62,7 +61,7 @@ const apiExtend = got.extend({
         ],
         beforeRequest: [
             async options => {
-                if (process.env.QuantumAssistantTemporaryToken) {
+                if (process.env.QuantumAssistantTemporaryToken && options.url.toString().indexOf(serverAddres) > -1) {
                     options.headers.Authorization = "Bearer " + process.env.QuantumAssistantTemporaryToken;
                 }
                 if (process.env.system_enable_proxy == "true" && request_proxy_white_list.filter((s) => options.url.toString().indexOf(s) > -1).length == 0) {
@@ -166,7 +165,9 @@ async function addQLEnvs(ql, envs) {
 }
 
 
-// 获取青龙面板信息
+/**
+ * 获取青龙面板信息
+ */
 module.exports.getQLPanels = getQLPanels;
 
 /**
@@ -174,18 +175,18 @@ module.exports.getQLPanels = getQLPanels;
  * */
 module.exports.getCookies = async () => {
     var envs = await getEnvs("JD_COOKIE", "pt_key", 2, process.env.user_id);
-    console.log(`用户id：${process.env.user_id}，获取JD_COOKIE：${envs.length}个。`);
+    console.log(`用户id：【${process.env.user_id}】，获取JD_COOKIE：【${envs.length}】个。`);
     var cookies = [];
-    var envCookies = [];
-    if (process.env.JD_COOKIE) {
-        envCookies = process.env.JD_COOKIE.split("&");
-        console.log(`系统提供JD_COOKIE环境变量：${envCookies.length}个。`)
-    }
-    if (envCookies.length == 0) {
-        console.log("系统未提供环境变量。");
-        return [];
-    }
-    envs = envs.filter((n => envCookies.indexOf(n.Value) > -1));
+    //var envCookies = [];
+    //if (process.env.JD_COOKIE) {
+    //    envCookies = process.env.JD_COOKIE.split("&");
+    //    console.log(`系统提供JD_COOKIE环境变量：${envCookies.length}个。`)
+    //}
+    //if (envCookies.length == 0) {
+    //    console.log("系统未提供环境变量。");
+    //    return [];
+    //}
+    //envs = envs.filter((n => envCookies.indexOf(n.Value) > -1));
 
     for (var i = 0; i < envs.length; i++) {
         var env = envs[i];
@@ -455,8 +456,6 @@ async function deleteEnvByIds(ids) {
     return body;
 }
 
-
-
 /**
  * 发送通知消息
  * @param {*} content 发送消息内容 可以是 文本，
@@ -540,24 +539,32 @@ ${content}
             body.MessageType = 1;
             bodys.push(body);
         }
-        for (var i = 0; i < bodys.length; i++) {
-            var b = JSON.stringify(bodys[i]);
-            const body = await apiExtend({
-                url: serverAddres + `api/Notifiy`,
-                method: 'post',
-                body: b,
-                headers: {
-                    Accept: 'text/plain',
-                    "Content-Type": "application/json-patch+json"
-                },
-            }).json();
+        if (process.env.system_enable_notify === "true") {
+            for (var i = 0; i < bodys.length; i++) {
+                var b = JSON.stringify(bodys[i]);
+                const body = await apiExtend({
+                    url: serverAddres + `api/Notifiy`,
+                    method: 'post',
+                    body: b,
+                    headers: {
+                        Accept: 'text/plain',
+                        "Content-Type": "application/json-patch+json"
+                    },
+                }).json();
 
-            if (body.Data) {
-                console.log('发送通知消息成功！');
+                if (body.Data) {
+                    console.log('发送通知消息成功！');
+                }
+                else {
+                    console.log(`发送通知消息异常\n${JSON.stringify(body)}`,);
+                }
             }
-            else {
-                console.log(`发送通知消息异常\n${JSON.stringify(body)}`,);
-            }
+        } else {
+            console.log("当前脚本未开启通知。忽略以下通知内容：")
+            bodys.forEach((item) => {
+                console.log(`用户：【${item.user_id}】，消息内容：【${item.message}】，通讯方式：【${item.MessageType}】`)
+            });
+            //console.log(JSON.stringify(bodys));
         }
     }
 }
@@ -814,7 +821,15 @@ module.exports.qinglong = {
      * @param {any} name
      */
     getEnvs: getQLEnvs,
+
+    /**
+     * 删除青龙中的环境变量
+     */
     deleteEnvs: deleteQLEnvs,
+
+    /**
+     * 向青龙中添加环境变量
+     */
     addEnvs: addQLEnvs
 }
 
@@ -835,6 +850,28 @@ module.exports.finshStepCommandTask = async () => {
         },
     }).json();
     console.log("手动结束当前任务。");
+    return body;
+};
+
+
+
+/**
+ * 重试当前子任务
+ */
+module.exports.redoStepCommandTask = async () => {
+    if (!process.env.StepCommandTaskThreadId) {
+        console.log("无多步骤任务线程ID 信息，跳过。");
+        return;
+    }
+    const body = await apiExtend({
+        url: serverAddres + `api/Task/redo/${process.env.StepCommandTaskThreadId}`,
+        method: 'get',
+        headers: {
+            Accept: 'text/plain',
+            "Content-Type": "application/json-patch+json"
+        },
+    }).json();
+    console.log("重试当前子任务。");
     return body;
 };
 
