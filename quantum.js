@@ -876,6 +876,35 @@ module.exports.redoStepCommandTask = async () => {
 };
 
 
+
+/**
+ * 为当前多步骤任务新增一个自定义变量，任务结束将自动销毁，如果当前任务有同名的变量将被替换
+ */
+module.exports.stepCommandTaskAddEnv = async (name, value) => {
+    if (!process.env.StepCommandTaskThreadId) {
+        console.log("无多步骤任务线程ID 信息，跳过。");
+        return;
+    }
+    var pattern = /^[a-zA-Z][a-zA-Z0-9_]{1,64}$/
+    if (!pattern.test(name)) {
+        console.log("环境变量 只能包含数字和字母下划线长度1-64位");
+        return;
+    }
+    const body = await apiExtend({
+        url: serverAddres + `api/Task/AddEnv/${process.env.StepCommandTaskThreadId}`,
+        method: 'post',
+        headers: {
+            Accept: 'text/plain',
+            "Content-Type": "application/json-patch+json"
+        },
+        body: JSON.stringify({
+            name: name,
+            value: value
+        })
+    }).json();
+    return body;
+};
+
 /**
  * 扣除当前用户积分
  * @param {Integer} USE_SCORE 扣除积分数量
