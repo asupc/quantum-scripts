@@ -123,7 +123,7 @@ async function QueryAccount(env) {
     }
 
     try {
-        msg += await bean(cookie);// 查询京豆
+        //msg += await bean(cookie);// 查询京豆
     } catch (e) {
         console.log(`【${pin}】查询京豆信息异常。`)
         console.log(e.message)
@@ -141,7 +141,7 @@ async function QueryAccount(env) {
         console.log(e.message)
     }
     try {
-        msg += await getCoupons(cookie);  //优惠券
+        //msg += await getCoupons(cookie);  //优惠券
     } catch (e) {
         console.log(`【${pin}】查询优惠券信息异常。`)
         console.log(e.message)
@@ -197,10 +197,28 @@ async function health(cookie) {
     return '';
 }
 
+
+async function getjdfruitH5st() {
+    var data = JSON.stringify({
+        "shareCode": "123"
+    });
+    var config = {
+        method: 'post',
+        url: 'http://114.215.146.116:8001/initForFarm',
+        headers: {
+            'User-Agent': 'Apifox/1.0.0 (https://www.apifox.cn)',
+            'Content-Type': 'application/json'
+        },
+        body: data
+    };
+    return await api(config).json()
+}
+
 async function getjdfruit(cookie) {
+    var t = await getjdfruitH5st();
     const options = {
         url: `https://api.m.jd.com/client.action?functionId=initForFarm`,
-        body: `body=${escape(JSON.stringify({ "version": 4 }))}&appid=wh5&clientVersion=9.1.0`,
+        body: t.data,
         headers: {
             "accept": "*/*",
             "accept-encoding": "gzip, deflate, br",
@@ -213,7 +231,7 @@ async function getjdfruit(cookie) {
             "sec-fetch-dest": "empty",
             "sec-fetch-mode": "cors",
             "sec-fetch-site": "same-site",
-            "User-Agent": "jdapp;iPhone;9.4.4;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
+            "User-Agent": t.ua,
             "Content-Type": "application/x-www-form-urlencoded"
         },
         timeout: 10000,
@@ -241,14 +259,14 @@ async function getjdfruit(cookie) {
     if (fruit.JdFarmProdName) {
         if (fruit.JdtreeEnergy != 0) {
             if (fruit.treeState === 2 || fruit.treeState === 3) {
-                msg += `【东东农场】${fruit.JdFarmProdName} 可以兑换了!`;
-                await sendNotify(`【${userInfo.nickName}】东东农场的【${fruit.JdFarmProdName}】已经可以兑换啦 `);
+                msg += `【东东农场】[${fruit.JdFarmProdName}]可以兑换了!`;
+                //await sendNotify(`东东农场的【${fruit.JdFarmProdName}】已经可以兑换啦 `);
             } else {
                 msg += `【东东农场】${fruit.JdFarmProdName}(${((fruit.JdtreeEnergy / fruit.JdtreeTotalEnergy) * 100).toFixed(0)}%),共种值${fruit.JdwinTimes}次,已浇水${fruit.farmInfo.farmUserPro.treeEnergy / 10}次,还需${(fruit.farmInfo.farmUserPro.treeTotalEnergy - fruit.farmInfo.farmUserPro.treeEnergy) / 10}次`;
             }
         } else {
             if (fruit.treeState === 0) {
-                await sendNotify(`【{${userInfo.nickName}】东东农场水果领取后未重新种植 `);
+                await sendNotify(`东东农场水果领取后未重新种植 `);
             } else if (fruit.treeState === 1) {
                 msg += `【东东农场】${fruit.JdFarmProdName}种植中,共种值${fruit.JdwinTimes}次`;
             }
@@ -312,6 +330,7 @@ async function plantBean(cookie) {
     }
     return '';
 }
+
 async function getCoupons(cookie) {
     let options = {
         url: `https://wq.jd.com/activeapi/queryjdcouponlistwithfinance?state=1&wxadd=1&filterswitch=1&_=${Date.now()}&sceneval=2&g_login_type=1&callback=jsonpCBKB&g_ty=ls`,
@@ -661,12 +680,13 @@ async function redPacket(cookie) {
         return "";
     }
 }
+
 async function getJingBeanBalanceDetail(cookie, page) {
     const options = {
-        "url": `https://api.m.jd.com/client.action?functionId=getJingBeanBalanceDetail`,
-        "body": `body=${escape(JSON.stringify({ "pageSize": "20", "page": page.toString() }))}&appid=ld`,
+        "url": `https://api.m.jd.com/client.action?functionId=jingBeanDetail&clientVersion=12.2.0&build=98990&client=android&partner=vivo&oaid=80b5804dc9af365769ae4b0f6ea26e19cda7f9d27d30214ebfed6de06309c179&sdkVersion=33&lang=zh_CN&harmonyOs=0&networkType=wifi&uts=0f31TVRjBSsSn7wjFFbjOZZYjaJdLFhZJ1h20orwmZGFw2%2F5h4ptDwsF5R2m%2B0OhOh6%2BlorEX1ChUo2fe%2FhlO%2Ba%2BFUv77mazNwKEvLighfWPDau2RKcCxVZxg9c85oT9xFT%2BJvb%2BMQPdvyQWQwBQqu9o9Gab9alV6WypUzE%2BLr2QMG48vrkj2Ige4Riau3LnAqKthpofQrrP2Byu7cPhOA%3D%3D&uemps=0-0-2&ext=%7B%22prstate%22%3A%220%22%2C%22pvcStu%22%3A%221%22%2C%22cfgExt%22%3A%22%7B%5C%22privacyOffline%5C%22%3A%5C%220%5C%22%7D%22%7D&avifSupport=1&eid=eidA9ced812149scgqb9wvF4S4%2BVt5uK2%2B5UHIKm%2F0TxfSD7hX2EE%2BYo4VS9btVWyltfmFBV6hCXOgD2QdhaS%2BH1SMaBxXDgqAgrQM3WyG3VeqlINsZL&x-api-eid-token=jdd01IL43DPQEARLZLINOFQCGBZYLV253OVKCRCTYVP5AZBMHE4DYTIMZQDBMEN6P4LWYNNWSPXUKBUFYNUJVONZHIP5G67UVB64NMS5RX4I01234567&ef=1&ep=%7B%22hdid%22%3A%22JM9F1ywUPwflvMIpYPok0tt5k9kW4ArJEU3lfLhxBqw%3D%22%2C%22ts%22%3A1697419509938%2C%22ridx%22%3A-1%2C%22cipher%22%3A%7B%22area%22%3A%22CtTpCJuzCP80EJCyC180EJG4DK%3D%3D%22%2C%22d_model%22%3A%22VtSmDJVL%22%2C%22wifiBssid%22%3A%22YJDwDtq4YtY1CQG1ENcnENDvEQOnDJTtZJu3DNc5EJU%3D%22%2C%22osVersion%22%3A%22CJC%3D%22%2C%22d_brand%22%3A%22dwv2bm%3D%3D%22%2C%22screen%22%3A%22CtCnEIenCNqm%22%2C%22uuid%22%3A%22CzSnCzdwZJVrY2YzYWG0DK%3D%3D%22%2C%22aid%22%3A%22CzSnCzdwZJVrY2YzYWG0DK%3D%3D%22%2C%22openudid%22%3A%22CzSnCzdwZJVrY2YzYWG0DK%3D%3D%22%7D%2C%22ciphertype%22%3A5%2C%22version%22%3A%221.2.0%22%2C%22appname%22%3A%22com.jingdong.app.mall%22%7D&st=1697420956864&sign=b1f51689f9a5a0949d1c1fcaf45f080d&sv=110`,
+        "body": `body=${escape(JSON.stringify({ "pageSize": "20", "page": page.toString() }))}`,
         "headers": {
-            'User-Agent': "jdapp;iPhone;9.4.4;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
+            'User-Agent': "okhttp/3.12.16;jdmall;android;version/12.2.0;build/98990;",
             'Host': 'api.m.jd.com',
             'Content-Type': 'application/x-www-form-urlencoded',
             'Cookie': cookie,

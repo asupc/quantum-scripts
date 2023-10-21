@@ -1,3 +1,13 @@
+/**
+ * 
+ * 需要配置量子变量 
+ * Pro_URL   
+ *          Pro的服务地址  大概是这样  http://192.168.10.100:5016   http:// 不要丢了，端口号后面不要带/login 啥的
+ * Pro_BotApiToken
+ *          通过Pro 管理端 全局配置 BotApiToken 随便填一串，比如  L!Y-D&2f3VH4;^,7   ，然后配置量子变量
+ * 
+ */
+
 
 let ADD_COOKIE = process.env.ADD_COOKIE || "";
 let ProStart = process.env.ProStart;
