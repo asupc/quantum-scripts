@@ -1,3 +1,5 @@
+
+let bbkCustomDataType = "bbk_jd_wskey";
 const {
     getCustomData, updateCustomData, addCustomData, addOrUpdateCustomDataTitle
 } = require('./quantum');
