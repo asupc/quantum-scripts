@@ -1,4 +1,3 @@
-
 let bbkCustomDataType = "bbk_jd_wskey";
 const {
     getCustomData, updateCustomData, addCustomData, addOrUpdateCustomDataTitle
@@ -11,7 +10,7 @@ const {
  * @param {any} nickname 京东账号昵称
  */
 module.exports.addOrUpdateBbkWskey = async (wskey, pin, nickname) => {
-    console.log("开始提交ProWskey到自定义数据中");
+    console.log("开始提交bbkWskey到自定义数据中");
     var customDatas = await getCustomData(bbkCustomDataType, null, null, { Data5: pin })
     var customData = {
         Type: bbkCustomDataType,
@@ -25,7 +24,7 @@ module.exports.addOrUpdateBbkWskey = async (wskey, pin, nickname) => {
         Data8: await getJD_COOKIE_Pin_status(pin) ? "是" : "否"
     }
     if (customDatas && customDatas.length > 0) {
-        console.log("更新ProWskey信息到自定义数据中");
+        console.log("更新bbkWskey信息到自定义数据中");
         customData.Id = customDatas[0].Id;
         await updateCustomData(customData);
     }
@@ -53,3 +52,16 @@ module.exports.addBbkWskeyCustomDataTitle = async () => {
         Title9: "转换时间"
     })
 }
+
+async function getJD_COOKIE_Pin_status(pin) {
+    if (process.env.JD_COOKIE_DEFAULT_STATUS == "false") {
+        var dd = await getCustomData("QuantumSN", null, null, {
+            Data6: pin,
+            Data9: "生效中"
+        });
+        console.log(`【${pin}】，卡密状态：【${(dd && dd.length > 0)}】`)
+        return dd && dd.length > 0;
+    }
+    return true;
+}
+module.exports.bbkCustomDataType = bbkCustomDataType;

@@ -33,10 +33,10 @@ const {
     sendNotify, api, finshStepCommandTask, sleep, stepCommandTaskAddEnv
 } = require('./quantum');
 
-const { addOrUpdateJDCookie, commonWskey, GetJDUserInfoUnion
+const { addOrUpdateJDCookie, convertWskey, GetJDUserInfoUnion
 } = require('./jd_base');
 
-const { addOrUpdateBbkWskey, addBbkWskeyCustomDataTitle
+const { addOrUpdateBbkWskey, addBbkWskeyCustomDataTitle, bbkCustomDataType
 } = require('./bbk_base');
 
 !(async () => {
@@ -106,7 +106,7 @@ const { addOrUpdateBbkWskey, addBbkWskeyCustomDataTitle
                 console.log(`获取到wskey：${wskey}`);
                 console.log("将wskey转换成app_open格式：" + wskey)
                 await addBbkWskeyCustomDataTitle()
-                var convertResult = await commonWskey(wskey);
+                var convertResult = await convertWskey(wskey);
                 if (!convertResult.success || convertResult.data.indexOf("pt_key=app_open") < 0) {
                     console.log("wskey转换失败了。");
                     await sendNotify(tps);
