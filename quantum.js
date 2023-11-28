@@ -490,6 +490,9 @@ ${content}
     } else {
         group_id = process.env.group_id
     }
+    if (userId && !uuid) {
+        uuid = userId;
+    }
     if (serverAddres && uuid) {
         if (userId) {
             uuid = userId;
