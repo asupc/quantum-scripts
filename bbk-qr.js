@@ -19,7 +19,7 @@ const {
     sendNotify, api, sleep, serverAddres
 } = require('./quantum');
 
-const { convertWskey, GetJDUserInfoUnion, addOrUpdateJDCookie, addOrUpdateWskey } = require('./jd_base');
+const { convertWskey, GetJDUserInfoUnion, addOrUpdateJDCookie, addOrUpdateWskey, checkAddJDCookie } = require('./jd_base');
 
 var type = "微信";
 
@@ -163,7 +163,7 @@ async function getWeixinQR() {
  * 
  */
 async function checkWeixinLogin() {
-    var config = {
+    let config = {
         method: 'get',
         responseType: 'json',
         url: `${bbk_qr_url}/d/status?t=${Date.now()}`,
@@ -176,7 +176,7 @@ async function checkWeixinLogin() {
         }
     };
     const response = await api(config);
-    var result = response.body;
+    let result = response.body;
     console.log(JSON.stringify(response.body));
     if (result.code == 200) {
         return true;
@@ -187,15 +187,15 @@ async function checkWeixinLogin() {
     }
     if (result.code == 202) {
         console.log(response.body.errorMsg)
-        var msg = response.body.errorMsg;
-        var regResult = msg.match("<a.*?href=[\"']?((https?://)?/?[^\"']+)[\"']?.*?>(.+)</a>")
+        let msg = response.body.errorMsg;
+        let regResult = msg.match("<a.*?href=[\"']?((https?://)?/?[^\"']+)[\"']?.*?>(.+)</a>")
         await sendNotify(`${regResult[3]}
 ${regResult[1]}`);
         return false;
     }
     if (result.code == 410) {
-        var wskey = result.data.wskey;
-        var tps = "扫码成功，但是提交失败了，请联系管理员查看相关日志。";
+        let wskey = result.data.wskey;
+        let tps = "扫码成功，但是提交失败了，请联系管理员查看相关日志。";
 
         if (!wskey) {
             console.log("扫码成功，但未返回wskey信息，请检查BBK配置信息。")
@@ -204,34 +204,36 @@ ${regResult[1]}`);
         }
         console.log(`扫码获取到wskey：${wskey}`);
         console.log("开始将wskey转换成app_open格式：" + wskey)
-        var convertResult = await convertWskey(wskey, type == "京东" || type == "口令" ? "是" : "否");
+        let convertResult = await convertWskey(wskey, type == "京东" || type == "口令" ? "是" : "否");
         if (!convertResult.success || convertResult.data.indexOf("pt_key=app_open") < 0) {
             console.log("wskey转换失败了。");
             await sendNotify(tps);
             return false;
         }
-        var jdck = convertResult.data;
-        console.log("开始获取京东账户基本信息");
-        var userInfo = await GetJDUserInfoUnion(jdck)
-        console.log("获取京东账户基本信息结果：" + JSON.stringify(userInfo));
-        if (!userInfo || !userInfo.data || userInfo.retcode != "0") {
-            sendNotify(`wskey似乎失效了：【${wskey}】`);
-            await sendNotify(tps);
-            return false;
-        }
-        var msg = `提交成功辣！
-账号昵称：${userInfo.data.userInfo.baseInfo.nickname}
-用户等级：${userInfo.data.userInfo.baseInfo.levelName}
-剩余京豆：${userInfo.data.assetInfo.beanNum}
-剩余红包：${userInfo.data.assetInfo.redBalance}`;
+        let key = wskey.match(/wskey=([^; ]+)(?=;?)/)[1]
+        let pin = wskey.match(/pin=([^; ]+)(?=;?)/)[1]
+        let jdck = convertResult.data;
+        await addOrUpdateWskey(key, pin, pin, type == "京东" || type == "口令" ? "是" : "否")
+        await checkAddJDCookie(jdck);
+        //         console.log("开始获取京东账户基本信息");
+        //         var userInfo = await GetJDUserInfoUnion(jdck)
+        //         console.log("获取京东账户基本信息结果：" + JSON.stringify(userInfo));
+        //         if (!userInfo || !userInfo.data || userInfo.retcode != "0") {
+        //             sendNotify(`wskey似乎失效了：【${wskey}】`);
+        //             await sendNotify(tps);
+        //             return false;
+        //         }
+        //         var msg = `提交成功辣！
+        // 账号昵称：${userInfo.data.userInfo.baseInfo.nickname}
+        // 用户等级：${userInfo.data.userInfo.baseInfo.levelName}
+        // 剩余京豆：${userInfo.data.assetInfo.beanNum}
+        // 剩余红包：${userInfo.data.assetInfo.redBalance}`;
 
-        var key = wskey.match(/wskey=([^; ]+)(?=;?)/)[1]
-        var pin = wskey.match(/pin=([^; ]+)(?=;?)/)[1]
 
-        await addOrUpdateWskey(key, pin, userInfo.data.userInfo.baseInfo.nickname, type == "京东" || type == "口令" ? "是" : "否")
-        console.log("开始处理提交JDCOOKIE：" + convertResult.data)
-        await addOrUpdateJDCookie(convertResult.data, process.env.user_id, userInfo.data.userInfo.baseInfo.nickname);
-        await sendNotify(msg);
+        //         await addOrUpdateWskey(key, pin, userInfo.data.userInfo.baseInfo.nickname, type == "京东" || type == "口令" ? "是" : "否")
+        //         console.log("开始处理提交JDCOOKIE：" + convertResult.data)
+        //         await addOrUpdateJDCookie(convertResult.data, process.env.user_id, userInfo.data.userInfo.baseInfo.nickname);
+        //         await sendNotify(msg);
         return false;
     }
     return true;

@@ -6,7 +6,7 @@ if (!process.env.NO_CK_NOTIFY) {
     process.env.NO_CK_NOTIFY = "您没有提交CK。请按照教程获取CK发送给机器人。";
 }
 
-const { disableEnvs, sendNotify, addEnvs, allEnvs, api, getCustomData, updateCustomData, addCustomData, addOrUpdateCustomDataTitle
+const { disableEnvs, deductionIntegral, getUserInfo, sendNotify, addEnvs, allEnvs, api, getCustomData, updateCustomData, addCustomData, addOrUpdateCustomDataTitle
 } = require('./quantum');
 
 const wskeyCustomDataType = "wskey_record";
@@ -47,6 +47,176 @@ async function getJD_COOKIE_Pin_status(pin) {
         return dd && dd.length > 0;
     }
     return true;
+}
+
+/**
+ * 检查并添加cookie
+ * @param {*} cookie 
+ * @returns 
+ */
+async function checkAddCookie(cookie) {
+    let user_id = process.env.user_id;
+    let ADD_COOKIE_USE_SCORE = (process.env.ADD_COOKIE_USE_SCORE || 0) * 1;
+
+    if (ADD_COOKIE_USE_SCORE > 0) {
+        user = (await getUserInfo()) || {};
+        if (!user || user.MaxEnvCount < ADD_COOKIE_USE_SCORE) {
+            await sendNotify(`该操作需要${ADD_COOKIE_USE_SCORE}积分
+您当前积分剩余：${user.MaxEnvCount}`)
+            return;
+        }
+    }
+
+    var pt_key = "";
+    var pt_pin = ""
+    if (cookie.indexOf("pt_pin") < 0) {
+        cookie = cookie + "pt_pin=" + uuid(8) + ";"
+    }
+    cookie = cookie.replace(/[\r\n]/g, "");
+    try {
+        pt_key = cookie.match(/pt_key=([^; ]+)(?=;?)/)[1]
+        pt_pin = cookie.match(/pt_pin=([^; ]+)(?=;?)/)[1]
+    }
+    catch (e) {
+        console.log("CK： " + cookie + "格式不对，已跳过");
+        return;
+    }
+    if (!pt_key || !pt_pin) {
+        return;
+    }
+    user_id = cookie.match(/qq=([^; ]+)(?=;?)/)
+    if (user_id) {
+        user_id = user_id[1];
+    } else {
+        user_id = process.env.user_id;
+    }
+    //处理pt_pin中带中文的问题
+    var reg = new RegExp("[\\u4E00-\\u9FFF]+", "g");
+    if (reg.test(pt_pin)) {
+        pt_pin = encodeURI(pt_pin);
+    }
+    cookie = `pt_key=${pt_key};pt_pin=${pt_pin};`
+    let UserName = pt_pin
+    let UserName2 = decodeURI(UserName);
+
+    let loginState = false;
+    try {
+        loginState = await islogin(cookie);
+    } catch (e) {
+        console.log("检测CK出现异常，" + cookie);
+        console.log("异常信息，" + JSON.stringify(e));
+        await sendNotify("检查账号登录状态异常，建议稍后重新提交。");
+        return;
+    }
+    if (!loginState) {
+        await sendNotify(`【${cookie}】提交失败，Cookie可能过期了`)
+        return;
+    }
+
+    if (ADD_COOKIE_USE_SCORE && ADD_COOKIE_USE_SCORE > 0) {
+        var result = await deductionIntegral(ADD_COOKIE_USE_SCORE)
+        if (result.Code != 200) {
+            await sendNotify(result.Message);
+            return false;
+        }
+    }
+    let nickName = UserName2;
+    let jdInfo = await GetJDUserInfoUnion(cookie);
+    let msg = "京东账号提交成功！";
+    if (jdInfo.retcode == 0) {
+        nickName = jdInfo.data.userInfo.baseInfo.nickname || nickName
+        msg += `
+用户等级：${jdInfo.data.userInfo.baseInfo.levelName}
+京东昵称：${jdInfo.data.userInfo.baseInfo.nickname || nickName}`
+        try {
+            if (jdInfo.data.assetInfo.beanNum) {
+                msg += "\r\n剩余京豆：" + jdInfo.data.assetInfo.beanNum
+            }
+            if (jdInfo.data.assetInfo.redBalance && parseInt(jdInfo.data.assetInfo.redBalance) > 0) {
+                msg += "\r\n剩余红包：" + jdInfo.data.assetInfo.redBalance
+            }
+        } catch {
+
+        }
+    } else {
+        console.log("获取账号基本信息限流。。")
+        msg += `
+未查询账户基本信息，建议稍后查询！`
+    }
+    await sendNotify(msg);
+    await addOrUpdateJDCookieEnv(cookie, process.env.user_id, nickName);
+}
+
+async function addOrUpdateJDCookieEnv(jdCookie, user_id, nickname) {
+    var pt_key = jdCookie.match(/pt_key=([^; ]+)(?=;?)/)[1]
+    var pt_pin = jdCookie.match(/pt_pin=([^; ]+)(?=;?)/)[1]
+    if (!pt_key || !pt_pin) {
+        return;
+    }
+    var c = {
+        Name: "JD_COOKIE",
+        Enable: await getJD_COOKIE_Pin_status(pt_pin),
+        Value: `pt_key=${pt_key};pt_pin=${pt_pin};`,
+        UserRemark: nickname,
+        UserId: user_id,
+        EnvType: 2
+    }
+    var data2 = await allEnvs(pt_pin, 2);
+    var temp = null;
+    if (data2.length > 0) {
+        console.log("pt_pin存在，尝试更新JD_COOKIE");
+        c.Id = data2[0].Id;
+        c.Weight = data2[0].Weight;
+
+        if (nickname == pt_pin) {
+            if (!data2[0].UserRemark) {
+                c.UserRemark = nickname;
+            } else {
+                c.UserRemark = data2[0].UserRemark;
+            }
+        } else {
+            c.UserRemark = nickname;
+        }
+        c.QLPanelEnvs = data2[0].QLPanelEnvs;
+        c.Remark = data2[0].Remark;
+        if (process.env.UPDATE_COOKIE_NOTIFY) {
+            await sendNotify(`Cookie更新通知
+用户ID：${process.env.CommunicationUserId}
+用户昵称：${process.env.CommunicationUserName || ""}
+京东昵称：${nickname}`, true)
+        }
+        temp = data2[0];
+    } else {
+        console.log("全新韭菜上线拉！");
+        c.Id = null;
+        if (process.env.ADD_COOKIE_NOTIFY) {
+            await sendNotify(`Cookie新增通知
+用户ID：${process.env.CommunicationUserId}
+用户昵称：${process.env.CommunicationUserName || ""}
+京东昵称：${nickname}`, true)
+        }
+    }
+    var data = await addEnvs([c]);
+    // console.log("环境变量提交结果：" + JSON.stringify(data));
+    return temp;
+}
+
+async function GetJDUserInfoUnion(jdCookie) {
+    const options = {
+        url: "https://me-api.jd.com/user_new/info/GetJDUserInfoUnion",
+        headers: {
+            Host: "me-api.jd.com",
+            Accept: "*/*",
+            Connection: "keep-alive",
+            Cookie: jdCookie,
+            "User-Agent": "jdapp;iPhone;9.4.4;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
+            "Accept-Language": "zh-cn",
+            "Referer": "https://home.m.jd.com/myJd/newhome.action?sceneval=2&ufc=&",
+            "Accept-Encoding": "gzip, deflate, br"
+        }
+    }
+    const body = await api(options).json();
+    return body;
 }
 
 /**
@@ -177,23 +347,9 @@ module.exports.QueryJDUserInfo = async (jdCookie) => {
  * 获取账号基本信息
  * @param {any} jdCookie
  */
-module.exports.GetJDUserInfoUnion = async (jdCookie) => {
-    const options = {
-        url: "https://me-api.jd.com/user_new/info/GetJDUserInfoUnion",
-        headers: {
-            Host: "me-api.jd.com",
-            Accept: "*/*",
-            Connection: "keep-alive",
-            Cookie: jdCookie,
-            "User-Agent": "jdapp;iPhone;9.4.4;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
-            "Accept-Language": "zh-cn",
-            "Referer": "https://home.m.jd.com/myJd/newhome.action?sceneval=2&ufc=&",
-            "Accept-Encoding": "gzip, deflate, br"
-        }
-    }
-    const body = await api(options).json();
-    return body;
-}
+module.exports.GetJDUserInfoUnion = GetJDUserInfoUnion;
+
+module.exports.checkAddJDCookie = checkAddCookie;
 
 /**
  * 添加或者更新jdCookie pt_key 格式
@@ -205,47 +361,7 @@ module.exports.GetJDUserInfoUnion = async (jdCookie) => {
  * @param {any} nickname 京东账号昵称
  * @param {bool} JD_COOKIE_DEFAULT_STATUS 指定环境变量状态
  */
-module.exports.addOrUpdateJDCookie = async (jdCookie, user_id, nickname) => {
-    var pt_key = jdCookie.match(/pt_key=([^; ]+)(?=;?)/)[1]
-    var pt_pin = jdCookie.match(/pt_pin=([^; ]+)(?=;?)/)[1]
-    if (!pt_key || !pt_pin) {
-        return;
-    }
-    var c = {
-        Name: "JD_COOKIE",
-        Enable: await getJD_COOKIE_Pin_status(pt_pin),
-        Value: `pt_key=${pt_key};pt_pin=${pt_pin};`,
-        UserRemark: nickname,
-        UserId: user_id,
-        EnvType: 2
-    }
-    var data2 = await allEnvs(pt_pin, 2);
-    if (data2.length > 0) {
-        console.log("pt_pin存在，尝试更新JD_COOKIE");
-        c.Id = data2[0].Id;
-        c.Weight = data2[0].Weight;
-        c.UserRemark = nickname;
-        c.QLPanelEnvs = data2[0].QLPanelEnvs;
-        c.Remark = data2[0].Remark;
-        if (process.env.UPDATE_COOKIE_NOTIFY) {
-            await sendNotify(`Cookie更新通知
-用户ID：${process.env.CommunicationUserId}
-用户昵称：${process.env.CommunicationUserName || ""}
-京东昵称：${nickname}`, true)
-        }
-    } else {
-        console.log("全新韭菜上线拉！");
-        c.Id = null;
-        if (process.env.ADD_COOKIE_NOTIFY) {
-            await sendNotify(`Cookie新增通知
-用户ID：${process.env.CommunicationUserId}
-用户昵称：${process.env.CommunicationUserName || ""}
-京东昵称：${nickname}`, true)
-        }
-    }
-    var data = await addEnvs([c]);
-    console.log("环境变量提交结果：" + JSON.stringify(data));
-}
+module.exports.addOrUpdateJDCookie = addOrUpdateJDCookieEnv;
 
 /**
  * 京东口令
@@ -256,7 +372,7 @@ module.exports.jCommand = async (command) => {
     try {
         var options = {
             'method': 'POST',
-            'url': 'http://119.3.233.105:8080/JDSign/jCommand',
+            'url': process.env.jdCommandService || 'http://119.3.233.105:8080/JDSign/jCommand',
             'headers': {
                 'Content-Type': 'application/json'
             },
@@ -350,7 +466,42 @@ module.exports.sntypes = [{
     "key": "5"
 }];
 
-
+/**
+ * 新版农场基本信息
+ * @param {any} cookie
+ * @returns
+ */
+async function farm_home(cookie) {
+    var hdata = await universal("farm_home",
+        {
+            "version": 2
+        }, {
+        "appid": "signed_wh5",
+        "appId": "c57f6",
+        "version": "4.2"
+    });
+    let config = {
+        method: 'post',
+        url: 'https://h5.m.jd.com/client.action',
+        headers: {
+            'Host': 'api.m.jd.com',
+            'User-Agent': hdata.ua,
+            'accept': 'application/json, text/plain, */*',
+            'Origin': 'https://h5.m.jd.com',
+            'X-Requested-With': 'com.jingdong.app.mall',
+            'Sec-Fetch-Site': 'same-site',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Dest': 'empty',
+            'Referer': 'https://h5.m.jd.com/',
+            'Cookie': cookie,
+            'content-type': 'application/x-www-form-urlencoded'
+        },
+        body: hdata.data
+    };
+    let result = await api(config).json()
+    return result;
+    //return result.data.result.farmHomeShare.inviteCode;
+}
 
 /**
  * 将wskey 转换成 app_open
@@ -442,3 +593,8 @@ module.exports.addProWskeyCustomDataTitle = async () => {
 
 module.exports.wskeyCustomDataType = wskeyCustomDataType;
 module.exports.ProCustomDataType = ProCustomDataType;
+
+/**
+ * 新版农场基本信息
+ */
+module.exports.farm_home = farm_home;

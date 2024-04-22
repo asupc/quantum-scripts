@@ -25,18 +25,26 @@ const {
 } = require('./quantum');
 
 const {
-    islogin, QueryJDUserInfo
+    islogin, QueryJDUserInfo, GetJDUserInfoUnion
 } = require('./jd_base');
 
 //单个账号异常重试次数
 var tryCount = 3;
 
 !(async () => {
-    var cookiesArr = await getCookies();
-    if (cookiesArr.length == 0) {
-        console.log("没有Cookies信息结束任务。");
-        await sendNotify(NO_CK_NOTIFY);
-        return;
+
+    let isQuantum = process.env.QuantumAssistantTemporaryToken && process.env.QuantumAssistantTemporaryToken.length > 0;
+
+    let cookiesArr = [];
+    if (isQuantum) {
+        cookiesArr = await getCookies();
+        if (cookiesArr.length == 0) {
+            console.log("没有Cookies信息结束任务。");
+            await sendNotify(NO_CK_NOTIFY);
+            return;
+        }
+    } else {
+        cookiesArr = [{ Value: 'pt_key=app_openAAJmGdTXADC8wyHEj1_coKZhKlewPXSxVN3OPpYoVXl95DN3c_tBRbuNYDlKYpPtyNWYWxC8kf0;pt_pin=18690725682_p;' }]
     }
     if (QUERY_JD_USE_SCORE > 0) {
         var user = (await getUserInfo()) || {};
@@ -106,6 +114,7 @@ async function QueryAccount(env) {
     try {
         msg += await TotalBean(cookie);  //账户基本信息
     } catch (e) {
+        msg += "\r\n【京东账号】" + getPin(cookie)
         console.log(`【${pin}】查询账户基本信息异常。`)
         console.log(e.message)
     }
@@ -711,35 +720,31 @@ async function queryScores(cookie) {
 }
 
 async function TotalBean(cookie) {
-    var data = await QueryJDUserInfo(cookie);
-    var userInfo = {
-        nickName: (data['base'] && data['base'].nickname) || getPin(cookie),
-        isPlusVip: data['isPlusVip'],
-        isRealNameAuth: data['isRealNameAuth'],
-        beanCount: (data['base'] && data['base'].jdNum) || 0,
-        JingXiang: (data['base'] && data['base'].jvalue) || 0,
+    let jdInfo = await GetJDUserInfoUnion(cookie);
+    let userInfo = {
+        nickName: (jdInfo.data.userInfo.baseInfo.nickname) || getPin(cookie),
+        isPlusVip: jdInfo.data.userInfo.isPlusVip,
+        isRealNameAuth: jdInfo.data.userInfo.isRealNameAuth,
+        beanCount: jdInfo.data.assetInfo.beanNum || 0,
     }
 
-    var PlustotalScore = 0;
-    if (userInfo.isPlusVip) {
-        PlustotalScore = await queryScores(cookie); //plus会员分
-    }
+    let PlustotalScore = 0;
     msg = `\n【京东账号】${userInfo.nickName}`;
-    if (userInfo.JingXiang) {
-        if (userInfo.isRealNameAuth)
-            msg += `(已实名)`;
-        else
-            msg += `(未实名)`;
-        msg += `\n【账号信息】`;
-        if (userInfo.isPlusVip) {
-            msg += `Plus会员`;
-            if (PlustotalScore > 0)
-                msg += `(${PlustotalScore}分)`
-        } else {
-            msg += `普通会员`;
-        }
-        msg += `,京享值${userInfo.JingXiang}`;
+    if (userInfo.isRealNameAuth)
+        msg += `(已实名)`;
+    else
+        msg += `(未实名)`;
+    msg += `\n【账号信息】`;
+    if (userInfo.isPlusVip) {
+        msg += `Plus会员`;
+        if (PlustotalScore > 0)
+            msg += `(${PlustotalScore}分)`
+    } else {
+        msg += `普通会员`;
     }
+    // if (userInfo.JingXiang) {
+    //     msg += `\n京享值${userInfo.JingXiang}`;
+    // }
     msg += `\n【当前京豆】${userInfo.beanCount}豆(≈${(userInfo.beanCount / 100).toFixed(2)}元)`;
 
     return msg;

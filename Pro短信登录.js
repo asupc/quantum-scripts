@@ -15,12 +15,9 @@ let Phone = process.env.ProSMS_Phone;
 let VerifyCode = process.env.ProSMS_VerifyCode;
 let user_id = process.env.user_id;
 let CardCode = process.env.ProSMS_CardCode;
-let JINGXIANGZHI = (process.env.JINGXIANGZHI || 0) * 1;
-
 
 let ADD_COOKIE_USE_SCORE = (process.env.ADD_COOKIE_USE_SCORE || 0) * 1;
 
-let JINGXIANGZHI_MSG = process.env.JINGXIANGZHI_MSG || "您的京享值过低，无法自动完成任务！";
 
 let CARD_CODE_MESSAGE = "本次登录需要提供您绑定身份证前2后4位认证，如：110324，如最后一位为X请输入大写。";
 if (process.env.CARD_CODE_MESSAGE) {
@@ -32,10 +29,10 @@ let Pro_URL = process.env.Pro_URL;
 let Pro_BotApiToken = process.env.Pro_BotApiToken;
 
 var cookies = [];
-const { sendNotify, getUserInfo, uuid, api, deductionIntegral, finshStepCommandTask, 
+const { sendNotify, getUserInfo, api, finshStepCommandTask
 } = require('./quantum');
 
-const { QueryJDUserInfo,addOrUpdateJDCookie
+const { checkAddJDCookie
 } = require('./jd_base');
 
 !(async () => {
@@ -97,70 +94,7 @@ const { QueryJDUserInfo,addOrUpdateJDCookie
     for (let i = 0; i < cookies.length; i++) {
         var cookie = cookies[i];
         if (cookie) {
-            if (cookie.indexOf("pt_pin") < 0) {
-                cookie = cookie + "pt_pin=" + uuid(8) + ";"
-            }
-            cookie = cookie.replace(/[\r\n]/g, "");
-
-            var pt_key = null;
-            var pt_pin = null;
-            try {
-                pt_key = cookie.match(/pt_key=([^; ]+)(?=;?)/)[1]
-                pt_pin = cookie.match(/pt_pin=([^; ]+)(?=;?)/)[1]
-            }
-            catch (e) {
-                console.log("CK： " + cookie + "格式不对，已跳过");
-                continue;
-            }
-            if (!pt_key || !pt_pin) {
-                continue;
-            }
-            user_id = cookie.match(/qq=([^; ]+)(?=;?)/)
-            if (user_id) {
-                user_id = user_id[1];
-            } else {
-                user_id = process.env.user_id;
-            }
-            //处理pt_pin中带中文的问题
-            var reg = new RegExp("[\\u4E00-\\u9FFF]+", "g");
-            if (reg.test(pt_pin)) {
-                pt_pin = encodeURI(pt_pin);
-            }
-            cookie = `pt_key=${pt_key};pt_pin=${pt_pin};`
-
-            let UserName = pt_pin
-            let UserName2 = decodeURI(UserName);
-            let nickName = UserName2;
-            var jdInfo = await QueryJDUserInfo(cookie);
-
-            let JingXiang = jdInfo.base.jvalue;
-
-            if (jdInfo.retcode != 0) {
-                await sendNotify(`【${cookie}】提交失败，Cookie可能过期了`)
-                return false;
-            }
-            if (JINGXIANGZHI > 0) {
-                console.log("判断用户京享值是否大于：" + JINGXIANGZHI);
-                console.log("用户京享值：" + JingXiang);
-                if (JingXiang < JINGXIANGZHI) {
-                    console.log("用户京享值：" + JingXiang + "小于设置值：" + JINGXIANGZHI);
-                    await sendNotify(`账号：${nickName}，京享值：${JingXiang}，提交失败！\r${JINGXIANGZHI_MSG}`)
-                    continue;
-                }
-            }
-            if (ADD_COOKIE_USE_SCORE && ADD_COOKIE_USE_SCORE > 0) {
-                var result = await deductionIntegral(ADD_COOKIE_USE_SCORE)
-                if (result.Code != 200) {
-                    await sendNotify(result.Message);
-                    return false;
-                }
-            }
-            await addOrUpdateJDCookie(cookie, process.env.user_id, jdInfo.base.nickname);
-            await sendNotify(`提交成功！
-京享值：${jdInfo.base.jvalue}
-用户级别：${jdInfo.base.userLevel}
-剩余京豆：${jdInfo.base.jdNum}
-京东昵称：${jdInfo.base.nickname}`);
+            await checkAddJDCookie(cookie);
         }
     }
 

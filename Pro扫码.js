@@ -16,7 +16,7 @@ const {
     sendNotify, api, sleep, serverAddres
 } = require('./quantum');
 
-const { ProWskey, GetJDUserInfoUnion, addOrUpdateJDCookie, addOrUpdateProWskey } = require('./jd_base');
+const { ProWskey, GetJDUserInfoUnion, addOrUpdateJDCookie, addOrUpdateProWskey, checkAddJDCookie } = require('./jd_base');
 
 var fs = require("fs");
 
@@ -217,24 +217,43 @@ async function checkWeixinLogin(key) {
         }
         var jdck = convertResult.data;
         console.log("开始获取京东账户基本信息");
-        var userInfo = await GetJDUserInfoUnion(jdck)
-        console.log("获取京东账户基本信息结果：" + JSON.stringify(userInfo));
-        if (!userInfo || !userInfo.data || userInfo.retcode != "0") {
-            sendNotify(`wskey似乎失效了：【${wskey}】`);
-            await sendNotify(tps);
-            return false;
-        }
-        var msg = `提交成功辣！
-账号昵称：${userInfo.data.userInfo.baseInfo.nickname}
-用户等级：${userInfo.data.userInfo.baseInfo.levelName}
-剩余京豆：${userInfo.data.assetInfo.beanNum}
-剩余红包：${userInfo.data.assetInfo.redBalance}`;
         var key = wskey.match(/wskey=([^; ]+)(?=;?)/)[1]
         var pin = wskey.match(/pin=([^; ]+)(?=;?)/)[1]
-        await addOrUpdateProWskey(key, pin, userInfo.data.userInfo.baseInfo.nickname)
-        console.log("开始处理提交JDCOOKIE：" + convertResult.data)
-        await addOrUpdateJDCookie(convertResult.data, process.env.user_id, userInfo.data.userInfo.baseInfo.nickname);
-        await sendNotify(msg);
+        await addOrUpdateProWskey(key, pin, pin)
+        await checkAddJDCookie(jdck)
+        //         var userInfo = await GetJDUserInfoUnion(jdck)
+        //         console.log("获取京东账户基本信息结果：" + JSON.stringify(userInfo));
+        //         if (!userInfo || !userInfo.data || userInfo.retcode != "0") {
+        //             sendNotify(`wskey似乎失效了：【${wskey}】`);
+        //             await sendNotify(tps);
+        //             return false;
+        //         }
+        //         //         var msg = `提交成功辣！
+        //         // 账号昵称：${userInfo.data.userInfo.baseInfo.nickname}
+        //         // 用户等级：${userInfo.data.userInfo.baseInfo.levelName}
+        //         // 剩余京豆：${userInfo.data.assetInfo.beanNum}
+        //         // 剩余红包：${userInfo.data.assetInfo.redBalance}`;
+        //         var key = wskey.match(/wskey=([^; ]+)(?=;?)/)[1]
+        //         var pin = wskey.match(/pin=([^; ]+)(?=;?)/)[1]
+        //         await addOrUpdateProWskey(key, pin, userInfo.data.userInfo.baseInfo.nickname)
+        //         console.log("开始处理提交JDCOOKIE：" + convertResult.data)
+        //         // await addOrUpdateJDCookie(convertResult.data, process.env.user_id, userInfo.data.userInfo.baseInfo.nickname);
+
+
+
+        //         var temp = await addOrUpdateJDCookie(cookie, process.env.user_id, jdInfo.base.nickname);
+        //         let msg = `提交成功！
+        // 京享值：${jdInfo.base.jvalue}
+        // 用户级别：${jdInfo.base.userLevel}
+        // 剩余京豆：${jdInfo.base.jdNum}
+        // 京东昵称：${jdInfo.base.nickname}`
+        //         if (temp) {
+        //             msg += `\n当前权重：${temp.Weight}`
+        //         }
+        //         await sendNotify(msg);
+
+
+        // await sendNotify(msg);
         return false;
     }
     if (result.data.status == 0) {
