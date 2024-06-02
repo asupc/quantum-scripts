@@ -213,9 +213,8 @@ async function getjdfruitH5st() {
     });
     var config = {
         method: 'post',
-        url: 'http://114.215.146.116:8001/initForFarm',
+        url: 'http://quantum.cqzhilai.com.cn:8001/initForFarm',
         headers: {
-            'User-Agent': 'Apifox/1.0.0 (https://www.apifox.cn)',
             'Content-Type': 'application/json'
         },
         body: data
