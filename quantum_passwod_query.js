@@ -27,11 +27,12 @@ let command = process.env.command;
         return;
     }
     if(datas.length==1){
-        await sendNotify(element.Data2)
+        await sendNotify(datas[0].Data2)
+        return;
     }
     let message ="为您找到以下密码：";
     for (let index = 0; index < datas.length; index++) {
-        const element = datas[index];
+        let element = datas[index];
         message+=`\r${element.Data1}，密码：${element.Data2}，备注：${element.Data3}`;
     }
     await sendNotify(message);
